@@ -1142,15 +1142,15 @@ export type TBAMatch = {
             team_keys: string[];
         };
     };
-    winning_alliance: string;
+    winning_alliance?: string;
     event_key: string;
     time: number;
-    actual_time: number;
+    actual_time?: number;
     predicted_time: number;
-    post_result_time: number;
+    post_result_time?: number;
     score_breakdown: {
-        red: unknown;
-        blue: unknown;
+        red?: unknown;
+        blue?: unknown;
     };
     videos: {
         key: string;
@@ -1172,23 +1172,23 @@ export type TBAMatchSimple = {
     match_number: number;
     alliances: {
         red: {
-            score: number;
+            score?: number;
             team_keys: string[];
         };
         blue: {
-            score: number;
+            score?: number;
             team_keys: string[];
         };
     };
-    winning_alliance: string;
+    winning_alliance?: string;
     event_key: string;
     time: number;
-    actual_time: number;
+    actual_time?: number;
     predicted_time: number;
-    post_result_time: number;
+    post_result_time?: number;
     score_breakdown: {
-        red: unknown;
-        blue: unknown;
+        red?: unknown;
+        blue?: unknown;
     };
     videos: {
         key: string;
