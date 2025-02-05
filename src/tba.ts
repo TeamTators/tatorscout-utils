@@ -63,3 +63,16 @@ export const MatchSchema = z.object({
 });
 
 export type TBAMatch = z.infer<typeof MatchSchema>;
+
+export const teamsFromMatch = (match: TBAMatch): [number, number, number, number, number, number] => {
+    const redTeams = match.alliances.red.team_keys.map((key) => parseInt(key.slice(3)));
+    const blueTeams = match.alliances.blue.team_keys.map((key) => parseInt(key.slice(3)));
+    return [
+        redTeams[0],
+        redTeams[1],
+        redTeams[2],
+        blueTeams[0],
+        blueTeams[1],
+        blueTeams[2],
+    ];
+};
