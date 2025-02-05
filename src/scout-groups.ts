@@ -1,4 +1,4 @@
-import { TBAMatch, TBATeam } from './tba';
+import { TBAMatch, TBATeam } from './old-tba';
 
 /**
  * Returns an array of team numbers from a match
