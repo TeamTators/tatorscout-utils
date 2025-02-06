@@ -1,21 +1,9 @@
 import { z } from 'zod';
 
-
+// these are the only keys we care about
 export const EventSchema = z.object({
   key: z.string(),
   name: z.string(),
-  event_code: z.string(),
-  event_type: z.number(),
-  district: z
-    .object({
-      abbreviation: z.string(),
-      display_name: z.string(),
-      key: z.string(),
-    })
-    .nullable(),
-  city: z.string().nullable(),
-  state_prov: z.string().nullable(),
-  country: z.string().nullable(),
   start_date: z.string(), // Consider using z.date() if parsing dates
   end_date: z.string(),   // Consider using z.date() if parsing dates
   year: z.number(),
@@ -30,11 +18,6 @@ export const TeamSchema = z.object({
   team_number: z.number(),
   nickname: z.string().nullable(),
   name: z.string().nullable(),
-  school_name: z.string().nullable(),
-  city: z.string().nullable(),
-  state_prov: z.string().nullable(),
-  country: z.string().nullable(),
-  // Add other fields as necessary
 });
 
 export type TBATeam = z.infer<typeof TeamSchema>;
@@ -60,6 +43,10 @@ export const MatchSchema = z.object({
   predicted_time: z.number().nullable(),
   actual_time: z.number().nullable(),
   // Add other fields as necessary
+  score_breakdown: z.object({
+    red: z.unknown(),
+    blue: z.unknown(),
+  }).nullable()
 });
 
 export type TBAMatch = z.infer<typeof MatchSchema>;
