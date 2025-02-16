@@ -3,6 +3,8 @@ import { all as all2025, zones as zones2025 } from './2025-areas';
 import { isInside } from 'math/polygon';
 import { Point2D } from 'math/point';
 import { $Math } from 'ts-utils/math';
+import { attempt } from 'ts-utils/check';
+import { z } from 'zod';
 
 /**
  * Description placeholder
@@ -184,6 +186,21 @@ const decompressNum = (str: string) => {
  * @typedef {Trace}
  */
 export class Trace {
+    static parse(trace: string) {
+        return attempt<TraceArray>(() => {
+            const parsed = z.array(z.tuple([
+                z.number(),
+                z.number(),
+                z.number(),
+                z.union([
+                    z.string(),
+                    z.literal(0),
+                ])
+            ])).parse(JSON.parse(trace));
+            return parsed as TraceArray;
+        });
+    }
+
     /**
      * Description placeholder
      * @date 1/25/2024 - 4:58:48 PM
