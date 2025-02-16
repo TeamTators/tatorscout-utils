@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { type TBAMatch, type TBATeam } from './old-tba';
 
 /**
@@ -33,6 +34,19 @@ export type Assignment = {
     ];
     interferences: number;
 };
+
+export const AssignmentSchema = z.object({
+    groups: z.array(z.array(z.number())),
+    matchAssignments: z.tuple([
+        z.array(z.number()),
+        z.array(z.number()),
+        z.array(z.number()),
+        z.array(z.number()),
+        z.array(z.number()),
+        z.array(z.number())
+    ]),
+    interferences: z.number()
+});
 
 /**
  * Generates scout groups from a list of teams and matches
