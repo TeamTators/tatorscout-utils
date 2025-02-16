@@ -25,6 +25,10 @@
       "import": "./lib/esm/2024-areas.js",
       "require": "./lib/cjs/2024-areas.js"
     },
+    "./2025-areas": {
+      "import": "./lib/esm/2025-areas.js",
+      "require": "./lib/cjs/2025-areas.js"
+    },
     "./scout-groups": {
       "import": "./lib/esm/scout-groups.js",
       "require": "./lib/cjs/scout-groups.js"
