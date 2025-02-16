@@ -63,3 +63,26 @@ export const teamsFromMatch = (match: TBAMatch): [number, number, number, number
         blueTeams[2],
     ];
 };
+
+export type CompLevel = 'qm' | 'qf' | 'sf' | 'f' | 'pr';
+export const matchSort = (a: TBAMatch, b: TBAMatch) => {
+  if (a.comp_level === 'sf' && b.comp_level === 'sf') {
+    return a.set_number - b.set_number;
+  }
+    const compLevelOrder: { [key in CompLevel]: number } = {
+        qm: 0,
+        qf: 1,
+        sf: 2,
+        f: 3,
+        pr: 4,
+    };
+
+    const aOrder = compLevelOrder[a.comp_level as CompLevel];
+    const bOrder = compLevelOrder[b.comp_level as CompLevel];
+
+    if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+    }
+
+    return a.match_number - b.match_number;
+};
