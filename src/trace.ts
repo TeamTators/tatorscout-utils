@@ -3,7 +3,7 @@ import { all as all2025, zones as zones2025 } from './2025-areas';
 import { isInside } from 'math/polygon';
 import { Point2D } from 'math/point';
 import { $Math } from 'ts-utils/math';
-import { attempt } from 'ts-utils/check';
+import { attempt, Result } from 'ts-utils/check';
 import { z } from 'zod';
 
 /**
@@ -186,7 +186,7 @@ const decompressNum = (str: string) => {
  * @typedef {Trace}
  */
 export class Trace {
-    static parse(trace: string) {
+    static parse(trace: string): Result<TraceArray> {
         return attempt<TraceArray>(() => {
             const parsed = z.array(z.tuple([
                 z.number(),
