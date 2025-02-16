@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { type TBAMatch, type TBATeam } from './old-tba';
+import { type TBAMatch, type TBATeam } from './tba';
 
 /**
  * Returns an array of team numbers from a match
