@@ -177,6 +177,16 @@ const decompressNum = (str: string) => {
     return num;
 };
 
+export const TraceSchema = z.array(z.tuple([
+    z.number(),
+    z.number(),
+    z.number(),
+    z.union([
+        z.string(),
+        z.literal(0),
+    ])
+]));
+
 /**
  * Description placeholder
  * @date 1/25/2024 - 4:58:48 PM
@@ -188,15 +198,7 @@ const decompressNum = (str: string) => {
 export class Trace {
     static parse(trace: string): Result<TraceArray> {
         return attempt<TraceArray>(() => {
-            const parsed = z.array(z.tuple([
-                z.number(),
-                z.number(),
-                z.number(),
-                z.union([
-                    z.string(),
-                    z.literal(0),
-                ])
-            ])).parse(JSON.parse(trace));
+            const parsed = TraceSchema.parse(JSON.parse(trace));
             return parsed as TraceArray;
         });
     }
