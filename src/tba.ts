@@ -34,6 +34,8 @@ export const MediaSchema = z.object({
     type: z.string(),
 });
 
+export type TBAMedia = z.infer<typeof MediaSchema>;
+
 // Match Schema
 export const MatchSchema = z.object({
   key: z.string(),
