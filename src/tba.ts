@@ -22,6 +22,49 @@ export const TeamSchema = z.object({
 
 export type TBATeam = z.infer<typeof TeamSchema>;
 
+export const MediaSchema = z.object({
+    details: z.object({
+        base64Image: z.string().optional(),
+    }),
+    direct_url: z.string(),
+    foreign_key: z.string(),
+    preferred: z.boolean(),
+    team_keys: z.array(z.string()),
+    view_url: z.string(),
+    type: z.string(),
+});
+
+export type TBAMedia = z.infer<typeof MediaSchema>;
+
+export const TeamEventStatusSchema = z.object({
+    playoff: z.object({
+        record: z.object({
+            losses: z.number(),
+            wins: z.number(),
+            ties: z.number(),
+        }),
+        status: z.string(),
+        level: z.string().nullable(),
+        current_level_record: z.object({
+            losses: z.number(),
+            wins: z.number(),
+            ties: z.number(),
+        })
+    }).optional().nullable(),
+    qual: z.object({
+        ranking: z.object({
+            rank: z.number(),
+            record: z.object({
+                losses: z.number(),
+                wins: z.number(),
+                ties: z.number(),
+            }),
+        }),
+    }).optional().nullable(),
+});
+
+export type TBATeamEventStatus = z.infer<typeof TeamEventStatusSchema>;
+
 // Match Schema
 export const MatchSchema = z.object({
   key: z.string(),
