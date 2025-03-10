@@ -89,7 +89,11 @@ export const MatchSchema = z.object({
   score_breakdown: z.object({
     red: z.unknown(),
     blue: z.unknown(),
-  }).nullable()
+  }).nullable(),
+  videos: z.array(z.object({
+    key: z.string(),
+    type: z.string(),
+  })).nullable().optional(),
 });
 
 export type TBAMatch = z.infer<typeof MatchSchema>;
