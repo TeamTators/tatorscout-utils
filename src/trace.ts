@@ -465,7 +465,7 @@ export class Trace {
             }
         }
 
-        return notMoving * 4;
+        return notMoving / 4;
     }
 
     static get velocity() {
