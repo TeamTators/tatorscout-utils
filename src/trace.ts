@@ -60,25 +60,25 @@ export type Zones2024 =
     | 'red-zone';
 
 export const actions = {
-    cl1: 'coralL1',
-    cl2: 'coralL2',
-    cl3: 'coralL3',
-    cl4: 'coralL4',
-    prc: 'processor',
-    brg: 'barge',
-    dpc: 'deepclimb',
-    shc: 'shallowclimb',
-    spk: 'speaker',
-    amp: 'amp',
-    src: 'source',
-    trp: 'trap',
-    clb: 'climb',
-    lob: 'lob',
-    cne: 'cone',
-    cbe: 'cube',
-    bal: 'balance',
-    pck: 'pick',
-    nte: 'nte'
+    cl1: 'Coral L1',
+    cl2: 'Coral L2',
+    cl3: 'Coral L3',
+    cl4: 'Coral L4',
+    prc: 'Processor',
+    brg: 'Barge',
+    dpc: 'Deep Climb',
+    shc: 'Shallowc limb',
+    spk: 'Speaker',
+    amp: 'Amp',
+    src: 'Source',
+    trp: 'Trap',
+    clb: 'Climb',
+    lob: 'Lob',
+    cne: 'Cone',
+    cbe: 'Cube',
+    bal: 'Balance',
+    pck: 'Pick',
+    nte: 'Note'
 };
 
 export type TraceParse2025 = {
