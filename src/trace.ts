@@ -741,18 +741,22 @@ export class Trace {
 
                 const noClimb = trace.every(p => p[3] !== 'clb');
 
-                if (
-                    noClimb &&
-                    trace.length &&
-                    isInside(
-                        [
-                            trace[trace.length - 1][1],
-                            trace[trace.length - 1][2]
-                        ],
-                        parkZone
+                try {
+                    if (
+                        noClimb &&
+                        trace.length &&
+                        isInside(
+                            [
+                                trace[trace.length - 1][1],
+                                trace[trace.length - 1][2]
+                            ],
+                            parkZone
+                        )
                     )
-                )
-                    score.teleop.park = teleop.park;
+                        score.teleop.park = teleop.park;
+                } catch (error) {
+                    console.error(error);
+                }
 
                 score.auto.total = Object.values(score.auto).reduce(
                     (a, b) => a + b
