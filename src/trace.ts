@@ -719,8 +719,12 @@ export class Trace {
                         if (p[3] === 'cl4') score.auto.cl4 += auto.cl4;
                         if (p[3] === 'brg') score.auto.brg += auto.brg;
                         if (p[3] === 'prc') score.auto.prc += auto.prc;
-                        if (!isInside([p[1], p[2]], autoZone))
-                            score.auto.mobility = auto.mobility;
+                        try {
+                            if (!isInside([p[1], p[2]], autoZone))
+                                score.auto.mobility = auto.mobility;
+                        } catch (error) {
+                            console.error(error);
+                        }
                     } else {
                         if (p[3] === 'cl1') score.teleop.cl1 += teleop.cl1;
                         if (p[3] === 'cl2') score.teleop.cl2 += teleop.cl2;
