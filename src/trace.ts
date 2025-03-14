@@ -680,6 +680,7 @@ export class Trace {
                 return score;
             },
             parse2025: (trace: TraceArray, alliance: 'red' | 'blue') => {
+                alliance = alliance ? alliance : 'red';
                 const { auto, teleop } = Trace.score.yearBreakdown[2025];
 
                 const score = {
