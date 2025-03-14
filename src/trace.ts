@@ -82,13 +82,11 @@ export const actions = {
 };
 
 export type TraceParse2025 = {
-    mobility: boolean;
     parked: boolean;
     groundPicks: boolean;
 };
 
 export type TraceParse2024 = {
-    mobility: boolean;
     parked: boolean;
     groundPicks: boolean;
 };
@@ -575,8 +573,7 @@ export class Trace {
                     2024: {
                         auto: {
                             spk: 5,
-                            amp: 2,
-                            mobility: 2
+                            amp: 2
                         },
                         teleop: {
                             spk: 2,
@@ -594,8 +591,7 @@ export class Trace {
                             cl3: 6,
                             cl4: 7,
                             brg: 4,
-                            prc: 6,
-                            mobility: 3,
+                            prc: 6
                         },
                         teleop: {
                             cl1: 2,
@@ -618,7 +614,6 @@ export class Trace {
                     auto: {
                         spk: 0,
                         amp: 0,
-                        mobility: 0,
                         lob: 0,
                         total: 0
                     },
@@ -643,8 +638,6 @@ export class Trace {
                     if (p[0] <= 65) {
                         if (p[3] === 'spk') score.auto.spk += auto.spk;
                         if (p[3] === 'amp') score.auto.amp += auto.amp;
-                        if (!isInside([p[1], p[2]], autoZone))
-                            score.auto.mobility = auto.mobility;
                     } else {
                         if (p[3] === 'spk') score.teleop.spk += teleop.spk;
                         if (p[3] === 'amp') score.teleop.amp += teleop.amp;
@@ -670,7 +663,7 @@ export class Trace {
                     score.endgame.park = teleop.park;
 
                 score.auto.total =
-                    score.auto.spk + score.auto.amp + score.auto.mobility;
+                    score.auto.spk + score.auto.amp;
                 score.teleop.total =
                     score.teleop.spk + score.teleop.amp + score.teleop.trp;
                 score.endgame.total = score.endgame.clb + score.endgame.park;
@@ -679,6 +672,7 @@ export class Trace {
 
                 return score;
             },
+
             parse2025: (trace: TraceArray, alliance: 'red' | 'blue') => {
                 alliance = alliance ? alliance : 'red';
                 const { auto, teleop } = Trace.score.yearBreakdown[2025];
@@ -691,7 +685,6 @@ export class Trace {
                         cl4: 0,
                         brg: 0,
                         prc: 0,
-                        mobility: 0,
                         total: 0
                     },
                     teleop: {
@@ -719,12 +712,6 @@ export class Trace {
                         if (p[3] === 'cl4') score.auto.cl4 += auto.cl4;
                         if (p[3] === 'brg') score.auto.brg += auto.brg;
                         if (p[3] === 'prc') score.auto.prc += auto.prc;
-                        try {
-                            if (!isInside([p[1], p[2]], autoZone))
-                                score.auto.mobility = auto.mobility;
-                        } catch (error) {
-                            console.error(error);
-                        }
                     } else {
                         if (p[3] === 'cl1') score.teleop.cl1 += teleop.cl1;
                         if (p[3] === 'cl2') score.teleop.cl2 += teleop.cl2;
@@ -765,8 +752,6 @@ export class Trace {
                 score.teleop.total = Object.values(score.teleop).reduce(
                     (a, b) => a + b
                 );
-
-                // score.endgame.total = score.endgame.clb + score.endgame.park;
 
                 score.total =
                     score.auto.total + score.teleop.total;
@@ -832,12 +817,10 @@ export class Trace {
                             labels: [
                                 'Speaker',
                                 // 'Amp',
-                                'Mobility'
                             ],
                             data: [
                                 traceData.map(t => t.auto.spk),
                                 // traceData.map(t => t.auto.amp),
-                                traceData.map(t => t.auto.mobility)
                             ].map($Math.average)
                         },
                         {
@@ -949,13 +932,11 @@ export class Trace {
                             labels: [
                                 'Coral',
                                 'Algae',
-                                'Mobility',
                                 'Total',
                             ],
                             data: [
                                 traceData.map(t => t.auto.cl1 + t.auto.cl2 + t.auto.cl3 + t.auto.cl4),
                                 traceData.map(t => t.auto.brg + t.auto.prc),
-                                traceData.map(t => t.auto.mobility),
                                 traceData.map(t => t.auto.total),
                             ].map($Math.average)
                         },
