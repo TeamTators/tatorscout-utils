@@ -928,7 +928,7 @@ export class Trace {
                     );
                     return [
                         {
-                            title: 'Auto Points',
+                            title: 'Average Auto Points',
                             labels: [
                                 'Coral',
                                 'Algae',
@@ -941,7 +941,20 @@ export class Trace {
                             ].map($Math.average)
                         },
                         {
-                            title: 'Teleop Points',
+                            title: 'Max Auto Points',
+                            labels: [
+                                'Coral',
+                                'Algae',
+                                'Total',
+                            ],
+                            data: [
+                                traceData.map(t => t.auto.cl1 + t.auto.cl2 + t.auto.cl3 + t.auto.cl4),
+                                traceData.map(t => t.auto.brg + t.auto.prc),
+                                traceData.map(t => t.auto.total),
+                            ].map($Math.max)
+                        },
+                        {
+                            title: 'Average Teleop Points',
                             labels: [
                                 'Coral',
                                 'Algae',
@@ -958,6 +971,25 @@ export class Trace {
                                 traceData.map(t => t.teleop.park),
                                 traceData.map(t => t.teleop.total)
                             ].map($Math.average)
+                        },
+                        {
+                            title: 'Max Teleop Points',
+                            labels: [
+                                'Coral',
+                                'Algae',
+                                'Shallow Climb',
+                                'Deep Climb',
+                                'Park',
+                                'Total'
+                            ],
+                            data: [
+                                traceData.map(t => t.teleop.cl1 + t.teleop.cl2 + t.teleop.cl3 + t.teleop.cl4),
+                                traceData.map(t => t.teleop.brg + t.teleop.prc),
+                                traceData.map(t => t.teleop.shc),
+                                traceData.map(t => t.teleop.dpc),
+                                traceData.map(t => t.teleop.park),
+                                traceData.map(t => t.teleop.total)
+                            ].map($Math.max)
                         },
                         {
                             title: 'Total Points',
