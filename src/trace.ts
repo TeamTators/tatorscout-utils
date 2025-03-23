@@ -60,35 +60,33 @@ export type Zones2024 =
     | 'red-zone';
 
 export const actions = {
-    cl1: 'coralL1',
-    cl2: 'coralL2',
-    cl3: 'coralL3',
-    cl4: 'coralL4',
-    prc: 'processor',
-    brg: 'barge',
-    dpc: 'deepclimb',
-    shc: 'shallowclimb',
-    spk: 'speaker',
-    amp: 'amp',
-    src: 'source',
-    trp: 'trap',
-    clb: 'climb',
-    lob: 'lob',
-    cne: 'cone',
-    cbe: 'cube',
-    bal: 'balance',
-    pck: 'pick',
-    nte: 'nte'
+    cl1: 'Coral L1',
+    cl2: 'Coral L2',
+    cl3: 'Coral L3',
+    cl4: 'Coral L4',
+    prc: 'Processor',
+    brg: 'Barge',
+    dpc: 'Deep Climb',
+    shc: 'Shallowc limb',
+    spk: 'Speaker',
+    amp: 'Amp',
+    src: 'Source',
+    trp: 'Trap',
+    clb: 'Climb',
+    lob: 'Lob',
+    cne: 'Cone',
+    cbe: 'Cube',
+    bal: 'Balance',
+    pck: 'Pick',
+    nte: 'Note'
 };
 
 export type TraceParse2025 = {
-    mobility: boolean;
     parked: boolean;
     groundPicks: boolean;
 };
 
 export type TraceParse2024 = {
-    mobility: boolean;
     parked: boolean;
     groundPicks: boolean;
 };
@@ -575,8 +573,7 @@ export class Trace {
                     2024: {
                         auto: {
                             spk: 5,
-                            amp: 2,
-                            mobility: 2
+                            amp: 2
                         },
                         teleop: {
                             spk: 2,
@@ -594,8 +591,7 @@ export class Trace {
                             cl3: 6,
                             cl4: 7,
                             brg: 4,
-                            prc: 6,
-                            mobility: 3,
+                            prc: 6
                         },
                         teleop: {
                             cl1: 2,
@@ -618,7 +614,6 @@ export class Trace {
                     auto: {
                         spk: 0,
                         amp: 0,
-                        mobility: 0,
                         lob: 0,
                         total: 0
                     },
@@ -643,8 +638,6 @@ export class Trace {
                     if (p[0] <= 65) {
                         if (p[3] === 'spk') score.auto.spk += auto.spk;
                         if (p[3] === 'amp') score.auto.amp += auto.amp;
-                        if (!isInside([p[1], p[2]], autoZone))
-                            score.auto.mobility = auto.mobility;
                     } else {
                         if (p[3] === 'spk') score.teleop.spk += teleop.spk;
                         if (p[3] === 'amp') score.teleop.amp += teleop.amp;
@@ -670,7 +663,7 @@ export class Trace {
                     score.endgame.park = teleop.park;
 
                 score.auto.total =
-                    score.auto.spk + score.auto.amp + score.auto.mobility;
+                    score.auto.spk + score.auto.amp;
                 score.teleop.total =
                     score.teleop.spk + score.teleop.amp + score.teleop.trp;
                 score.endgame.total = score.endgame.clb + score.endgame.park;
@@ -679,7 +672,9 @@ export class Trace {
 
                 return score;
             },
+
             parse2025: (trace: TraceArray, alliance: 'red' | 'blue') => {
+                alliance = alliance ? alliance : 'red';
                 const { auto, teleop } = Trace.score.yearBreakdown[2025];
 
                 const score = {
@@ -690,7 +685,6 @@ export class Trace {
                         cl4: 0,
                         brg: 0,
                         prc: 0,
-                        mobility: 0,
                         total: 0
                     },
                     teleop: {
@@ -718,8 +712,6 @@ export class Trace {
                         if (p[3] === 'cl4') score.auto.cl4 += auto.cl4;
                         if (p[3] === 'brg') score.auto.brg += auto.brg;
                         if (p[3] === 'prc') score.auto.prc += auto.prc;
-                        if (!isInside([p[1], p[2]], autoZone))
-                            score.auto.mobility = auto.mobility;
                     } else {
                         if (p[3] === 'cl1') score.teleop.cl1 += teleop.cl1;
                         if (p[3] === 'cl2') score.teleop.cl2 += teleop.cl2;
@@ -736,18 +728,22 @@ export class Trace {
 
                 const noClimb = trace.every(p => p[3] !== 'clb');
 
-                if (
-                    noClimb &&
-                    trace.length &&
-                    isInside(
-                        [
-                            trace[trace.length - 1][1],
-                            trace[trace.length - 1][2]
-                        ],
-                        parkZone
+                try {
+                    if (
+                        noClimb &&
+                        trace.length &&
+                        isInside(
+                            [
+                                trace[trace.length - 1][1],
+                                trace[trace.length - 1][2]
+                            ],
+                            parkZone
+                        )
                     )
-                )
-                    score.teleop.park = teleop.park;
+                        score.teleop.park = teleop.park;
+                } catch (error) {
+                    console.error(error);
+                }
 
                 score.auto.total = Object.values(score.auto).reduce(
                     (a, b) => a + b, 0
@@ -756,8 +752,6 @@ export class Trace {
                 score.teleop.total = Object.values(score.teleop).reduce(
                     (a, b) => a + b, 0
                 );
-
-                // score.endgame.total = score.endgame.clb + score.endgame.park;
 
                 score.total =
                     score.auto.total + score.teleop.total;
@@ -823,12 +817,10 @@ export class Trace {
                             labels: [
                                 'Speaker',
                                 // 'Amp',
-                                'Mobility'
                             ],
                             data: [
                                 traceData.map(t => t.auto.spk),
                                 // traceData.map(t => t.auto.amp),
-                                traceData.map(t => t.auto.mobility)
                             ].map($Math.average)
                         },
                         {
@@ -940,13 +932,11 @@ export class Trace {
                             labels: [
                                 'Coral',
                                 'Algae',
-                                'Mobility',
                                 'Total',
                             ],
                             data: [
                                 traceData.map(t => t.auto.cl1 + t.auto.cl2 + t.auto.cl3 + t.auto.cl4),
                                 traceData.map(t => t.auto.brg + t.auto.prc),
-                                traceData.map(t => t.auto.mobility),
                                 traceData.map(t => t.auto.total),
                             ].map($Math.average)
                         },
