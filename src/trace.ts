@@ -750,11 +750,11 @@ export class Trace {
                     score.teleop.park = teleop.park;
 
                 score.auto.total = Object.values(score.auto).reduce(
-                    (a, b) => a + b
+                    (a, b) => a + b, 0
                 );
 
                 score.teleop.total = Object.values(score.teleop).reduce(
-                    (a, b) => a + b
+                    (a, b) => a + b, 0
                 );
 
                 // score.endgame.total = score.endgame.clb + score.endgame.park;
