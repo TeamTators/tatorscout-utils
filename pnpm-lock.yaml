@@ -37,7 +37,7 @@ importers:
         version: 10.9.2(@types/node@22.10.7)(typescript@5.7.3)
       ts-utils:
         specifier: github:tsaxking/global-ts-utilities
-        version: https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/574e1bbb5ab19e4a380a88d06c50b510bb1f8bfb
+        version: https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/3bec5a4c72d0b6206de2c581fc442a8e5274c911
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
@@ -1122,8 +1122,8 @@ packages:
       '@swc/wasm':
         optional: true
 
-  ts-utils@https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/574e1bbb5ab19e4a380a88d06c50b510bb1f8bfb:
-    resolution: {tarball: https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/574e1bbb5ab19e4a380a88d06c50b510bb1f8bfb}
+  ts-utils@https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/3bec5a4c72d0b6206de2c581fc442a8e5274c911:
+    resolution: {tarball: https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/3bec5a4c72d0b6206de2c581fc442a8e5274c911}
     version: 1.0.0
 
   type-check@0.4.0:
@@ -2169,7 +2169,7 @@ snapshots:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
-  ts-utils@https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/574e1bbb5ab19e4a380a88d06c50b510bb1f8bfb:
+  ts-utils@https://codeload.github.com/tsaxking/global-ts-utilities/tar.gz/3bec5a4c72d0b6206de2c581fc442a8e5274c911:
     dependencies:
       typescript: 5.7.3
 
