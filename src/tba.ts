@@ -94,6 +94,7 @@ export const MatchSchema = z.object({
     key: z.string(),
     type: z.string(),
   })).nullable().optional(),
+  winning_alliance: z.string().nullable().optional(),
 });
 
 export type TBAMatch = z.infer<typeof MatchSchema>;
