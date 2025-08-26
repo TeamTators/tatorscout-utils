@@ -84,14 +84,21 @@ export class Trace {
     secondsNotMoving() {}
 }
 
-export interface YearInfo {
-    getAlliance(trace: Trace): 'red' | 'blue';
-    summarize(trace: { trace: Trace, alliance: 'red' | 'blue' }): {
-        title: string;
-        labels: string[];
-        data: number[]
-    }[];
+export class YearInfo {
+    test(): string {
+        return 'test';
+    }
+}
+
+export class Year2025 extends YearInfo {
+    getCoralL1() {
+        return 0;
+    }
 }
 
 
-export class Year2025 implements YearInfo {}
+export class Year2024 extends YearInfo {
+    getNotes() {
+        return 0;
+    }
+}
