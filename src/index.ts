@@ -9,8 +9,8 @@ type Action = YearActions | 0;
 type TraceArray = TracePoint[];
 type TracePoint = [number, number, number, Action];
 
-const encodeTrace = (trace: string) => {}
-const decodeTrace = (trace: TraceArray) => {};
+const encodeTrace = (trace: TraceArray) => {}
+const decodeTrace = (trace: string) => {};
 
 
 
@@ -47,7 +47,7 @@ export class Trace {
             if (parsed.encoded) {
                 return new Trace(
                     decodeTrace(parsed.data),
-                )
+                );
             } else {
                 return new Trace(
                     parsed.data as TraceArray,
@@ -64,6 +64,7 @@ export class Trace {
     serialize(encode: boolean) {
         return JSON.stringify({
             encoded: encode,
+            trace: encode ? encodeTrace(this.data) : this.data,
         });
     }
 
@@ -84,9 +85,14 @@ export class Trace {
     secondsNotMoving() {}
 }
 
+
 export class YearInfo {
     test(): string {
         return 'test';
+    }
+
+    getContribution(trace: Trace): number {
+        return 0;
     }
 }
 
@@ -102,3 +108,26 @@ export class Year2024 extends YearInfo {
         return 0;
     }
 }
+
+// traces
+// zones
+
+
+
+const t = new Trace();
+t.timesEnteredZone(new Zone());
+t.timeInZone(new Zone());
+t.histogram();
+
+const z = new Zone();
+z.timesEntered(new Trace());
+
+
+t.getAverageVelocity();
+t.expand(); // expands the trace to duplicated points
+t.section('auto'); // return new trace or something
+t.filterAction();
+t.secondsNotMoving();
+
+const mt = new MultiTrace(...traces);
+mt.histogram();
