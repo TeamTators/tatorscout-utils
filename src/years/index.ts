@@ -1,4 +1,5 @@
 import { Trace } from "..";
+import * as test from './2025';
 
 export class YearInfo {
     test(): string {
@@ -8,4 +9,6 @@ export class YearInfo {
     getContribution(trace: Trace): number {
         return 0;
     }
+
+    areas: Record<string, [number, number][]> = {};
 }

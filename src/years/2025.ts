@@ -7,6 +7,6 @@ class YearInfo2025 extends YearInfo {
     }
 }
 
-export const yearInfo = new YearInfo2025();
+export default new YearInfo2025();
 
-export const areas = {};
+export type { YearInfo2025 };

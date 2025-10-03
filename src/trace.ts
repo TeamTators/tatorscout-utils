@@ -6,6 +6,13 @@ import { $Math } from 'ts-utils/math';
 import { attempt, Result } from 'ts-utils/check';
 import { z } from 'zod';
 
+export class TraceError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'TraceError';
+    }
+}
+
 /**
  * Description placeholder
  * @date 1/8/2025 - 7:24:32 PM
@@ -997,3 +1004,42 @@ export const validateObj = {
     group: (d: number | null) => d === null || (d >= -1 && d <= 5),
     preScouting: 'boolean'
 };
+
+// Rules for the new trace system:
+/*
+- Exclusively 600 points
+- Normalized from 0 to 1
+- Rounded to 3 sig figs
+
+- velocity / time
+- velocity / position
+- seconds not moving
+- velocity histogram
+- time in zone
+- average velocity
+
+- filter action
+*/
+
+class _Trace {
+    static deserialize(trace: string) {
+        return attempt<_Trace>(() => {
+            throw new Error('Method not implemented.');
+        });
+    }
+
+    constructor(
+        public readonly data: TraceArray
+    ) {
+        if (data.length !== 600) throw new TraceError('Trace cannot be longer than 600 points');
+    }
+
+    getVelocityHistogram(normalize = false) {
+    }
+
+    timeInZone(zone: Point2D[]) {}
+
+    serialize() {
+        return '';
+    }
+}
