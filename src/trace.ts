@@ -125,55 +125,58 @@ export type TraceArray = P[];
  * Description placeholder
  * @date 1/11/2024 - 3:10:27 AM
  *
- * @type {("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+{}|:\"<>?`~[]';./=\\,")}
+ * @type {(ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz)}
  */
 const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+{}|:"<>?`~[]\';./=\\,';
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
-/**
- * Description placeholder
- * @date 1/25/2024 - 4:58:49 PM
- */
-const compressI = (num: number) => {
-    let str = chars[Math.floor(num / chars.length)] + chars[num % chars.length];
-    if (str[0] === 'A') str = str.slice(1); // remove leading A, since that is the default
-    return str;
-};
-
-/**
- * Description placeholder
- * @date 1/25/2024 - 4:58:49 PM
- */
-const decompressI = (str: string) => {
-    if (str.length === 1) str = 'A' + str; // add leading A, since that is the default
-    const index = chars.indexOf(str[0]) * chars.length + chars.indexOf(str[1]);
-    return index;
-};
-
-/**
- * Description placeholder
- * @date 1/25/2024 - 4:58:49 PM
- */
-const compressNum = (num: number) => {
-    let str = '';
+export const compressNum = (num: number) => {
+    if (num < 0 || num > 999) throw new Error('Number out of range');
+    if (num === 0) return 'A';
+    let result = '';
+    const base = chars.length;
     while (num > 0) {
-        str = chars[num % chars.length] + str;
-        num = Math.floor(num / chars.length);
+        result = chars[num % base] + result;
+        num = Math.floor(num / base);
     }
-    return str;
-};
+    return result; // 0 -> A, 1 -> B, ..., 51 -> bz, 52 -> c, ... 
+}
 
-/**
- * Description placeholder
- * @date 1/25/2024 - 4:58:49 PM
- */
-const decompressNum = (str: string) => {
+export const decompressNum = (str: string) => {
+    const base = chars.length;
     let num = 0;
     for (let i = 0; i < str.length; i++) {
-        num = num * chars.length + chars.indexOf(str[i]);
+        num += chars.indexOf(str[i]) * Math.pow(base, str.length - i - 1);
     }
     return num;
+}
+
+export const compressPoint = (p: P) => {
+    return [
+        p[0],
+        compressNum(p[1]),
+        compressNum(p[2]),
+        p[3],
+    ].join(' ');
 };
+
+export const decompressPoint = (p: string) => {
+    const [i, x, y, a] = p.split(' ');
+    return [
+        +i,
+        decompressNum(x),
+        decompressNum(y),
+        a === '0' ? 0 : a,
+    ] as P;
+}
+
+export const compress = (trace: TraceArray) => {
+    return trace.map(compressPoint).join(';');
+};
+
+export const decompress = (trace: string) => {
+    return trace.split(';').map(decompressPoint);
+}
 
 export const TraceSchema = z.array(z.tuple([
     z.number(),
@@ -201,70 +204,7 @@ export class Trace {
         });
     }
 
-    /**
-     * Description placeholder
-     * @date 1/25/2024 - 4:58:48 PM
-     *
-     * @static
-     * @param {TraceArray} trace
-     * @returns {*}
-     */
-    static encode(trace: TraceArray) {
-        return trace.map(Trace.compress);
-    }
-    /**
-     * Description placeholder
-     * @date 1/25/2024 - 4:58:48 PM
-     *
-     * @static
-     * @param {string[]} trace
-     * @returns {*}
-     */
-    static decode(trace: string[]) {
-        return trace.map(Trace.decompress);
-    }
 
-    /**
-     * Description placeholder
-     * @date 1/25/2024 - 4:58:48 PM
-     *
-     * @static
-     * @param {P} point
-     * @returns {string}
-     */
-    static compress(point: P): string {
-        const [i, x, y, a] = point;
-        // i is a whole number between 0 and 600
-        // x is a decimal between 0 and 1 (0.1234)
-        // y is a decimal between 0 and 1 (0.1234)
-        // a is a 3 character string without any punctuation (spk, amp, src, trp, clb)
-        // compress the point to a smaller string
-
-        const iStr = compressI(i);
-        const xStr = compressNum(Math.floor(x * 10000));
-        const yStr = compressNum(Math.floor(y * 10000));
-        const aStr = a === 0 ? ' ' : a;
-
-        return [iStr, xStr, yStr, aStr].join(' ');
-    }
-
-    /**
-     * Description placeholder
-     * @date 1/25/2024 - 4:58:48 PM
-     *
-     * @static
-     * @param {string} str
-     * @returns {P}
-     */
-    static decompress(str: string): P {
-        const [iStr, xStr, yStr, aStr] = str.split(' ');
-        const i = decompressI(iStr);
-        const x = decompressNum(xStr) / 10000;
-        const y = decompressNum(yStr) / 10000;
-        const a = aStr === '' ? 0 : (aStr as Action);
-
-        return [i, x, y, a];
-    }
 
     /**
      * Description placeholder
