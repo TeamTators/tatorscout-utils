@@ -937,3 +937,16 @@ export const validateObj = {
     group: (d: number | null) => d === null || (d >= -1 && d <= 5),
     preScouting: 'boolean'
 };
+
+
+
+
+export type CompressedTrace = {
+    compressed: true;
+    trace: string;
+};
+
+export type DecompressedTrace = {
+    compressed: false;
+    trace: TraceArray;
+}
