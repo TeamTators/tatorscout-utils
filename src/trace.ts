@@ -131,7 +131,8 @@ const chars =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
 export const compressNum = (num: number) => {
-    if (num < 0 || num > 999) throw new Error('Number out of range');
+    if (num < 0) num = 0;
+    if (num > 999) num = 999;
     if (num === 0) return 'A';
     let result = '';
     const base = chars.length;
