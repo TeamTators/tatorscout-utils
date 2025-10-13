@@ -133,36 +133,43 @@ const chars =
 export const compressNum = (num: number) => {
     if (num < 0) num = 0;
     if (num > 999) num = 999;
-    if (num === 0) return 'A';
-    let result = '';
+    
     const base = chars.length;
-    while (num > 0) {
-        result = chars[num % base] + result;
-        num = Math.floor(num / base);
-    }
-    return result; // 0 -> A, 1 -> B, ..., 51 -> bz, 52 -> c, ... 
+    
+    // Convert to base-52, ensuring exactly 2 characters
+    const firstChar = chars[Math.floor(num / base)];
+    const secondChar = chars[num % base];
+    
+    return firstChar + secondChar; // Always 2 characters: AA, AB, AC, ..., tZ
 }
 
 export const decompressNum = (str: string) => {
-    const base = chars.length;
-    let num = 0;
-    for (let i = 0; i < str.length; i++) {
-        num += chars.indexOf(str[i]) * Math.pow(base, str.length - i - 1);
+    if (str.length !== 2) {
+        throw new Error(`Expected 2 characters, got ${str.length}: ${str}`);
     }
-    return num;
+    
+    const base = chars.length;
+    const firstCharIndex = chars.indexOf(str[0]);
+    const secondCharIndex = chars.indexOf(str[1]);
+    
+    if (firstCharIndex === -1 || secondCharIndex === -1) {
+        throw new Error(`Invalid characters in compressed string: ${str}`);
+    }
+    
+    return firstCharIndex * base + secondCharIndex;
 }
 
 export const compressPoint = (p: P) => {
-    return [
-        compressNum(p[0]),
-        compressNum(p[1]),
-        compressNum(p[2]),
-        p[3],
-    ].join(' ');
+    return compressNum(p[0]) + compressNum(p[1]) + compressNum(p[2]) + (p[3] === 0 ? '0' : p[3]);
 };
 
 export const decompressPoint = (p: string) => {
-    const [i, x, y, a] = p.split(' ');
+    // Extract the three 2-character numbers and the action
+    const i = p.slice(0, 2);
+    const x = p.slice(2, 4);
+    const y = p.slice(4, 6);
+    const a = p.slice(6); // Everything after the 6th character is the action
+    
     return [
         decompressNum(i),
         decompressNum(x),
@@ -942,12 +949,10 @@ export const validateObj = {
 
 
 
-export type CompressedTrace = {
-    compressed: true;
+export type TraceState = {
+    state: 'compressed';
     trace: string;
-};
-
-export type DecompressedTrace = {
-    compressed: false;
+} | {
+    state: 'parsed' | 'expanded';
     trace: TraceArray;
 }
