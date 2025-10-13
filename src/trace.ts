@@ -154,7 +154,7 @@ export const decompressNum = (str: string) => {
 
 export const compressPoint = (p: P) => {
     return [
-        p[0],
+        compressNum(p[0]),
         compressNum(p[1]),
         compressNum(p[2]),
         p[3],
@@ -164,7 +164,7 @@ export const compressPoint = (p: P) => {
 export const decompressPoint = (p: string) => {
     const [i, x, y, a] = p.split(' ');
     return [
-        +i,
+        decompressNum(i),
         decompressNum(x),
         decompressNum(y),
         a === '0' ? 0 : a,
