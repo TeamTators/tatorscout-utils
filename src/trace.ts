@@ -138,6 +138,7 @@ const chars =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
 export const compressNum = (num: number) => {
+    if (!Number.isInteger(num)) throw new Error(`Expected integer, got ${num}`);
     if (num < 0) num = 0;
     if (num > 999) num = 999;
     
