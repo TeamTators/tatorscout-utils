@@ -3,6 +3,10 @@ import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 
+/**
+ * Global field zones for 2024 CRESCENDO game
+ * These are neutral areas accessible to both alliances (stage areas)
+ */
 const globalZones2024 = {
     sta1: [
         [0.026, 0.227],
@@ -30,6 +34,10 @@ const globalZones2024 = {
     ]
 };
 
+/**
+ * Alliance-specific zones for 2024 CRESCENDO game
+ * Includes stages, amps, alliance zones, sources, and autonomous areas
+ */
 const allianceZones2024 = {
     stages: {
         blue: [
@@ -127,6 +135,10 @@ const allianceZones2024 = {
     }
 };
 
+/**
+ * Action codes and display names for 2024 CRESCENDO game
+ * Maps short codes to human-readable action descriptions
+ */
 const actions2024 = {
     spk: 'Speaker',
     amp: 'Amp',
@@ -141,6 +153,10 @@ const actions2024 = {
     nte: 'Note'
 };
 
+/**
+ * Point values for each action in different game periods for 2024 CRESCENDO
+ * Defines scoring system used for calculating team performance
+ */
 const scoreBreakdown2024 = {
     auto: {
         spk: 5,
@@ -158,6 +174,11 @@ const scoreBreakdown2024 = {
     },
 }
 
+/**
+ * Structured score breakdown for 2024 CRESCENDO game
+ * Provides detailed scoring information for autonomous, teleop, and endgame periods
+ * @typedef {Readonly<object>} ParsedScoreBreakdown2024
+ */
 type ParsedScoreBreakdown2024 = Readonly<{
     auto: {
         spk: number;
@@ -178,6 +199,21 @@ type ParsedScoreBreakdown2024 = Readonly<{
     total: number;
 }>;
 
+/**
+ * Year-specific implementation for 2024 CRESCENDO game
+ * Handles field layout, scoring calculations, alliance detection, and game-specific analysis
+ * 
+ * @extends YearInfo
+ * @example
+ * ```typescript
+ * import year2024 from './2024';
+ * 
+ * const alliance = year2024.getAlliance(trace);
+ * const score = year2024.parse(trace);
+ * const climbData = year2024.climbTimes(trace);
+ * const needsGroundPick = year2024.mustGroundPick(trace);
+ * ```
+ */
 class YearInfo2024 extends YearInfo<
     typeof globalZones2024,
     typeof allianceZones2024,
@@ -185,6 +221,13 @@ class YearInfo2024 extends YearInfo<
     typeof scoreBreakdown2024,
     ParsedScoreBreakdown2024
 > {
+    /**
+     * Determines alliance based on robot's starting position
+     * Uses the first trace point to check which alliance zone the robot starts in
+     * 
+     * @param {Trace} trace - Robot movement trace data
+     * @returns {"red" | "blue" | "unknown"} Alliance color based on starting position
+     */
     getAlliance(trace: Trace): "red" | "blue" | "unknown" {
         if (!trace.points.length) return 'unknown';
         const initPoint: Point2D = [trace.points[0][1], trace.points[0][2]];
@@ -195,6 +238,20 @@ class YearInfo2024 extends YearInfo<
         }
     }
 
+    /**
+     * Parses a robot trace into detailed score breakdown for 2024 CRESCENDO
+     * Calculates points for speaker shots, amp scores, climbs, traps, and parking
+     * 
+     * @param {Trace} trace - Robot movement and action trace data
+     * @returns {ParsedScoreBreakdown2024} Detailed scoring breakdown by game period
+     * 
+     * @example
+     * ```typescript
+     * const scoreData = year2024.parse(robotTrace);
+     * console.log(`Auto points: ${scoreData.auto.total}`);
+     * console.log(`Endgame climbs: ${scoreData.endgame.clb}`);
+     * ```
+     */
     parse(trace: Trace): ParsedScoreBreakdown2024 {
         const alliance = this.getAlliance(trace);
 
@@ -267,6 +324,20 @@ class YearInfo2024 extends YearInfo<
         return score;
     }
 
+    /**
+     * Analyzes climb timing and duration from robot trace
+     * Tracks time spent in stage area before each climb/trap action
+     * 
+     * @param {Trace} trace - Robot movement trace data
+     * @returns {number[]} Array of time durations (in quarter-seconds) for each climb attempt
+     * 
+     * @example
+     * ```typescript
+     * const times = year2024.climbTimes(trace);
+     * console.log(`Climbs attempted: ${times.length}`);
+     * console.log(`Average climb time: ${times.reduce((a,b) => a+b) / times.length / 4}s`);
+     * ```
+     */
     climbTimes(trace: Trace): number[] {
         const alliance = this.getAlliance(trace);
         if (alliance === 'unknown') return [];
@@ -291,6 +362,21 @@ class YearInfo2024 extends YearInfo<
         return times;
     }
 
+    /**
+     * Determines if robot must have performed ground pickups during the match
+     * Compares speaker shots to source pickups to detect ground pickup necessity
+     * 
+     * @param {Trace} trace - Robot movement and action trace data
+     * @returns {boolean} True if ground pickups were required (more shots than source pickups + preload)
+     * 
+     * @example
+     * ```typescript
+     * const needsGroundPick = year2024.mustGroundPick(trace);
+     * if (needsGroundPick) {
+     *   console.log("Robot performed ground pickups");
+     * }
+     * ```
+     */
     mustGroundPick(trace: Trace): boolean {
         return (
             trace.filterAction('spk').length >
@@ -299,6 +385,20 @@ class YearInfo2024 extends YearInfo<
     }
 }
 
+/**
+ * Default instance of YearInfo2024 with complete field layout and scoring rules
+ * Ready to use for 2024 CRESCENDO game analysis
+ * 
+ * @type {YearInfo2024}
+ * @example
+ * ```typescript
+ * import year2024 from './years/2024';
+ * 
+ * const teamScore = year2024.parse(trace);
+ * const alliance = year2024.getAlliance(trace);
+ * const climbAnalysis = year2024.climbTimes(trace);
+ * ```
+ */
 export default new YearInfo2024(
     globalZones2024,
     allianceZones2024,
@@ -322,8 +422,29 @@ export default new YearInfo2024(
     scoreBreakdown2024
 );
 
+/**
+ * Export the YearInfo2024 class type for type checking and extension
+ * @typedef {YearInfo2024} YearInfo2024
+ */
 export type { YearInfo2024 };
 
+/**
+ * Predefined note positions on the 2024 CRESCENDO field
+ * Normalized coordinates for center line notes and wing notes
+ * Used for field visualization and note tracking analysis
+ * 
+ * @type {Point2D[]}
+ * @example
+ * ```typescript
+ * import { notePositions } from './years/2024';
+ * 
+ * // Find closest note to robot position
+ * const robotPos: Point2D = [0.3, 0.5];
+ * const closest = notePositions.reduce((prev, curr) => 
+ *   distance(robotPos, curr) < distance(robotPos, prev) ? curr : prev
+ * );
+ * ```
+ */
 export const notePositions: Point2D[] = [
     [0.5, 0.128],
     [0.5, 0.315],

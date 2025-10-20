@@ -3,6 +3,10 @@ import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 
+/**
+ * Global field zones for 2025 REEFSCAPE game
+ * These are neutral areas accessible to both alliances
+ */
 const globalZones2025 = {
     sta1: [
         [0.026, 0.227],
@@ -30,6 +34,10 @@ const globalZones2025 = {
     ]
 };
 
+/**
+ * Alliance-specific zones for 2025 REEFSCAPE game
+ * Includes autonomous zones, scoring areas, and alliance-specific regions
+ */
 const allianceZones2025 = {
     auto: {
         red: [
@@ -115,6 +123,10 @@ const allianceZones2025 = {
     }
 };
 
+/**
+ * Action codes and display names for 2025 REEFSCAPE game
+ * Maps short codes to human-readable action descriptions
+ */
 const actions2025 = {
     cl1: 'Coral L1',
     cl2: 'Coral L2',
@@ -126,6 +138,10 @@ const actions2025 = {
     shc: 'Shallow Climb',
 };
 
+/**
+ * Point values for each action in different game periods for 2025 REEFSCAPE
+ * Defines scoring system used for calculating team performance
+ */
 const scoreBreakdown2025 = {
     auto: {
         cl1: 3,
@@ -150,6 +166,11 @@ const scoreBreakdown2025 = {
     }
 };
 
+/**
+ * Structured score breakdown for 2025 REEFSCAPE game
+ * Provides detailed scoring information for autonomous, teleop, and endgame periods
+ * @typedef {Readonly<object>} ParsedScoreBreakdown2025
+ */
 type ParsedScoreBreakdown2025 = Readonly<{
     auto: {
         cl1: number;
@@ -178,6 +199,20 @@ type ParsedScoreBreakdown2025 = Readonly<{
     total: number;
 }>;
 
+/**
+ * Year-specific implementation for 2025 REEFSCAPE game
+ * Handles field layout, scoring calculations, and alliance detection
+ * 
+ * @extends YearInfo
+ * @example
+ * ```typescript
+ * import year2025 from './2025';
+ * 
+ * const alliance = year2025.getAlliance(trace);
+ * const score = year2025.parse(trace);
+ * const summary = year2025.summary(analysisSchema);
+ * ```
+ */
 class YearInfo2025 extends YearInfo<
     typeof globalZones2025,
     typeof allianceZones2025,
@@ -186,6 +221,13 @@ class YearInfo2025 extends YearInfo<
     ParsedScoreBreakdown2025
 > {
 
+    /**
+     * Determines alliance based on robot's starting position
+     * Uses the first trace point to check which alliance zone the robot starts in
+     * 
+     * @param {Trace} trace - Robot movement trace data
+     * @returns {"red" | "blue" | "unknown"} Alliance color based on starting position
+     */
     getAlliance(trace: Trace): "red" | "blue" | "unknown" {
         if (!trace.points.length) return 'unknown';
         const initPoint: Point2D = [trace.points[0][1], trace.points[0][2]];
@@ -196,6 +238,20 @@ class YearInfo2025 extends YearInfo<
         }
     }
 
+    /**
+     * Parses a robot trace into detailed score breakdown for 2025 REEFSCAPE
+     * Calculates points for coral placement, algae processing, and other scoring actions
+     * 
+     * @param {Trace} trace - Robot movement and action trace data
+     * @returns {ParsedScoreBreakdown2025} Detailed scoring breakdown by game period
+     * 
+     * @example
+     * ```typescript
+     * const scoreData = year2025.parse(robotTrace);
+     * console.log(`Auto points: ${scoreData.auto.total}`);
+     * console.log(`Teleop coral: ${scoreData.teleop.cl1 + scoreData.teleop.cl2}`);
+     * ```
+     */
     parse(trace: Trace): ParsedScoreBreakdown2025 {
         // alliance = ['red', 'blue'].includes(alliance) ? alliance : 'red';
         const { auto, teleop } = this.scoreBreakdown;
@@ -263,7 +319,19 @@ class YearInfo2025 extends YearInfo<
     }
 }
 
-
+/**
+ * Default instance of YearInfo2025 with complete field layout and scoring rules
+ * Ready to use for 2025 REEFSCAPE game analysis
+ * 
+ * @type {YearInfo2025}
+ * @example
+ * ```typescript
+ * import year2025 from './years/2025';
+ * 
+ * const teamScore = year2025.parse(trace);
+ * const alliance = year2025.getAlliance(trace);
+ * ```
+ */
 export default new YearInfo2025(
     globalZones2025,
     allianceZones2025,
@@ -280,4 +348,9 @@ export default new YearInfo2025(
     actions2025,
     scoreBreakdown2025
 );
+
+/**
+ * Export the YearInfo2025 class type for type checking and extension
+ * @typedef {YearInfo2025} YearInfo2025
+ */
 export type { YearInfo2025 };

@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-// these are the only keys we care about
+/**
+ * Zod schema for validating TBA (The Blue Alliance) event data
+ * Defines the structure of FRC event information
+ */
 export const EventSchema = z.object({
   key: z.string(),
   name: z.string(),
@@ -10,9 +13,16 @@ export const EventSchema = z.object({
   // Add other fields as necessary
 });
 
+/**
+ * TypeScript type for FRC event data from The Blue Alliance
+ * @typedef {TBAEvent}
+ */
 export type TBAEvent = z.infer<typeof EventSchema>;
 
-// Team Schema
+/**
+ * Zod schema for validating TBA team data
+ * Defines the structure of FRC team information
+ */
 export const TeamSchema = z.object({
   key: z.string(),
   team_number: z.number(),
@@ -20,8 +30,15 @@ export const TeamSchema = z.object({
   name: z.string().nullable(),
 });
 
+/**
+ * TypeScript type for FRC team data from The Blue Alliance
+ * @typedef {TBATeam}
+ */
 export type TBATeam = z.infer<typeof TeamSchema>;
 
+/**
+ * Zod schema for validating TBA media data (team photos, videos, etc.)
+ */
 export const MediaSchema = z.object({
     details: z.object({
         base64Image: z.string().optional(),
@@ -34,8 +51,16 @@ export const MediaSchema = z.object({
     type: z.string(),
 });
 
+/**
+ * TypeScript type for TBA media data
+ * @typedef {TBAMedia}
+ */
 export type TBAMedia = z.infer<typeof MediaSchema>;
 
+/**
+ * Zod schema for validating team event status data
+ * Includes qualification and playoff records
+ */
 export const TeamEventStatusSchema = z.object({
     playoff: z.object({
         record: z.object({
@@ -63,9 +88,16 @@ export const TeamEventStatusSchema = z.object({
     }).optional().nullable(),
 });
 
+/**
+ * TypeScript type for team event status data
+ * @typedef {TBATeamEventStatus}
+ */
 export type TBATeamEventStatus = z.infer<typeof TeamEventStatusSchema>;
 
-// Match Schema
+/**
+ * Zod schema for validating TBA match data
+ * Defines the structure of FRC match information including alliances, scores, and timing
+ */
 export const MatchSchema = z.object({
   key: z.string(),
   comp_level: z.string(),
@@ -97,8 +129,26 @@ export const MatchSchema = z.object({
   winning_alliance: z.string().nullable().optional(),
 });
 
+/**
+ * TypeScript type for FRC match data from The Blue Alliance
+ * @typedef {TBAMatch}
+ */
 export type TBAMatch = z.infer<typeof MatchSchema>;
 
+/**
+ * Extracts team numbers from a TBA match in alliance order
+ * Returns [red1, red2, red3, blue1, blue2, blue3]
+ * 
+ * @param {TBAMatch} match - The match object to extract teams from
+ * @returns {[number, number, number, number, number, number]} Array of 6 team numbers
+ * 
+ * @example
+ * ```typescript
+ * const teams = teamsFromMatch(match);
+ * const [red1, red2, red3, blue1, blue2, blue3] = teams;
+ * console.log(`Red alliance: ${red1}, ${red2}, ${red3}`);
+ * ```
+ */
 export const teamsFromMatch = (match: TBAMatch): [number, number, number, number, number, number] => {
     const redTeams = match.alliances.red.team_keys.map((key) => parseInt(key.slice(3)));
     const blueTeams = match.alliances.blue.team_keys.map((key) => parseInt(key.slice(3)));
@@ -112,7 +162,26 @@ export const teamsFromMatch = (match: TBAMatch): [number, number, number, number
     ];
 };
 
+/**
+ * Valid FRC competition levels
+ * @typedef {CompLevel}
+ */
 export type CompLevel = 'qm' | 'qf' | 'sf' | 'f' | 'pr';
+
+/**
+ * Sorts matches in proper competition order
+ * Orders by competition level (qm -> qf -> sf -> f -> pr) then by match number
+ * 
+ * @param {TBAMatch} a - First match to compare
+ * @param {TBAMatch} b - Second match to compare
+ * @returns {number} Sort comparison result (-1, 0, 1)
+ * 
+ * @example
+ * ```typescript
+ * const sortedMatches = matches.sort(matchSort);
+ * // Result: all qualifications first, then quarterfinals, etc.
+ * ```
+ */
 export const matchSort = (a: TBAMatch, b: TBAMatch) => {
   if (a.comp_level === 'sf' && b.comp_level === 'sf') {
     return a.set_number - b.set_number;
@@ -135,6 +204,10 @@ export const matchSort = (a: TBAMatch, b: TBAMatch) => {
     return a.match_number - b.match_number;
 };
 
+/**
+ * Comprehensive Zod schema for 2025 REEFSCAPE match data
+ * Includes detailed score breakdown with coral placement, algae processing, and endgame scoring
+ */
 export const Match2025Schema = z.object({
 	actual_time: z.number(),
 	alliances: z.object({
@@ -423,4 +496,9 @@ export const Match2025Schema = z.object({
 	winning_alliance: z.string()
 });
 
+/**
+ * TypeScript type for detailed 2025 REEFSCAPE match data
+ * Contains comprehensive scoring breakdown for coral, algae, and endgame activities
+ * @typedef {TBAMatch2025}
+ */
 export type TBAMatch2025 = z.infer<typeof Match2025Schema>;
