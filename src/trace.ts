@@ -593,4 +593,17 @@ export class Trace {
 
         return notMovingCount / 4; // Convert to seconds
     }
+
+    getSection(section: 'auto' | 'teleop' | 'endgame'): TraceArray {
+        switch (section) {
+            case 'auto':
+                return this.points.slice(0, 15 * 4) as TraceArray;
+            case 'teleop':
+                return this.points.slice(15 * 4, 135 * 4) as TraceArray;
+            case 'endgame':
+                return this.points.slice(135 * 4, 150 * 4) as TraceArray;
+            default:
+                return [];
+        }
+    }
 }
