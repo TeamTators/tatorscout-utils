@@ -574,4 +574,23 @@ export class Trace {
             });
         }
     }
+
+    /**
+     * Calculates total time robot was effectively stationary
+     * Counts intervals where velocity is below specified threshold
+     * @param threshold - Velocity threshold to consider as "not moving" (fps)
+     * @returns {number} Total time stationary in seconds
+     */
+    secondsNotMoving(threshold = 0.1): number {
+        const velocities = this.velocityMap();
+        let notMovingCount = 0;
+
+        for (const v of velocities) {
+            if (v < threshold) {
+                notMovingCount++;
+            }
+        }
+
+        return notMovingCount / 4; // Convert to seconds
+    }
 }
