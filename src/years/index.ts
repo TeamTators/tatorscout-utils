@@ -82,11 +82,11 @@ export type TimeAction<Actions extends string> = `${'auto' | 'teleop' | 'endgame
  * ```
  */
 export class YearInfo<
-    GlobalAreas extends ZoneMap, 
-    AllianceAreas extends AllianceZoneMap, 
-    Actions extends string,
-    Score extends ScoreBreakdown<Actions>,
-    ParsedScoreBreakdown
+    GlobalAreas extends ZoneMap = ZoneMap, 
+    AllianceAreas extends AllianceZoneMap = AllianceZoneMap, 
+    Actions extends string = string,
+    Score extends ScoreBreakdown<Actions> = ScoreBreakdown<Actions>,
+    ParsedScoreBreakdown = unknown
 > {
     /**
      * Creates a new YearInfo instance
