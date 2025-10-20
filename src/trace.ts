@@ -37,7 +37,7 @@ export class TraceError extends Error {
  * - X/Y coordinates: 0-1 (normalized field positions)
  * - Action: string code or 0 (no action)
  */
-export const DecompressedTraceSchema = z.array(z.tuple([
+export const TraceSchema = z.array(z.tuple([
     z.number().min(0).max(600).int(),
     z.number().min(0).max(1),
     z.number().min(0).max(1),
@@ -391,13 +391,13 @@ export class Trace {
 
             if (res.state === 'parsed') {
                 if (!Array.isArray(res.trace)) throw new TraceError('Expected trace to be an array for parsed state');
-                const parsedTrace = DecompressedTraceSchema.parse(res.trace);
+                const parsedTrace = TraceSchema.parse(res.trace);
                 return new Trace(Trace.expand(parsedTrace as TraceArray));
             }
 
             if (res.state === 'expanded') {
                 if (!Array.isArray(res.trace)) throw new TraceError('Expected trace to be an array for expanded state');
-                const expandedTrace = DecompressedTraceSchema.parse(res.trace);
+                const expandedTrace = TraceSchema.parse(res.trace);
                 return new Trace(expandedTrace as TraceArray);
             }
         });
@@ -407,7 +407,7 @@ export class Trace {
      * Creates a new Trace instance with validated point data
      * Ensures trace contains exactly 600 points (full match duration)
      * 
-     * @param {z.infer<typeof DecompressedTraceSchema>} points - Array of exactly 600 trace points
+     * @param {z.infer<typeof TraceSchema>} points - Array of exactly 600 trace points
      * @throws {Error} If points array is not exactly 600 elements
      * 
      * @example
@@ -418,7 +418,7 @@ export class Trace {
      * ```
      */
     constructor(
-        public readonly points: z.infer<typeof DecompressedTraceSchema>
+        public readonly points: z.infer<typeof TraceSchema>
     ) {
         if (points.length !== 600) {
             throw new Error(`Trace must have exactly 600 points. Got ${points.length}`);
