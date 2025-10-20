@@ -125,7 +125,9 @@ export class YearInfo<
      * @returns {ParsedScoreBreakdown} Detailed score breakdown by game period
      * @throws {Error} If not implemented in subclass
      */
-    parse(_trace: Trace): ParsedScoreBreakdown {
+    parse(
+        _trace: Trace
+    ): ParsedScoreBreakdown {
         throw new Error('parse not implemented for this year');
     }
 

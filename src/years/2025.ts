@@ -2,7 +2,7 @@ import { Point2D } from "math/point";
 import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
-import { createTypedSummary, SummarySchema } from "../summary";
+import { Aggregators, createTypedSummary, SummarySchema } from "../summary";
 import { $Math } from "ts-utils/math";
 
 /**
@@ -254,7 +254,9 @@ class YearInfo2025 extends YearInfo<
      * console.log(`Teleop coral: ${scoreData.teleop.cl1 + scoreData.teleop.cl2}`);
      * ```
      */
-    parse(trace: Trace): ParsedScoreBreakdown2025 {
+    parse(
+        trace: Trace
+    ): ParsedScoreBreakdown2025 {
         // alliance = ['red', 'blue'].includes(alliance) ? alliance : 'red';
         const { auto, teleop } = this.scoreBreakdown;
 
@@ -334,7 +336,7 @@ class YearInfo2025 extends YearInfo<
  * const alliance = year2025.getAlliance(trace);
  * ```
  */
-export default new YearInfo2025(
+const info = new YearInfo2025(
     globalZones2025,
     allianceZones2025,
     [
@@ -351,8 +353,63 @@ export default new YearInfo2025(
     scoreBreakdown2025
 );
 
+export default info;
+
 /**
  * Export the YearInfo2025 class type for type checking and extension
  * @typedef {YearInfo2025} YearInfo2025
  */
 export type { YearInfo2025 };
+
+
+/**
+ * Summary schema for aggregating 2025 REEFSCAPE game data
+ * Defines metrics for average points and velocity analysis
+ */
+export const summary = info.summary({
+    "Average Auto Points": {
+        "Coral": (data) => Aggregators.average(
+            data.map(d => d.auto.cl1 + d.auto.cl2 + d.auto.cl3 + d.auto.cl4)
+        ),
+        "Processor": (data) => Aggregators.average(
+            data.map(d => d.auto.prc)
+        ),
+        "Barge": (data) => Aggregators.average(
+            data.map(d => d.auto.brg)
+        ),
+        "Total": (data) => Aggregators.average(
+            data.map(d => d.auto.total)
+        ),
+    },
+    "Average Teleop Points": {
+        "Coral": (data) => Aggregators.average(
+            data.map(d => d.teleop.cl1 + d.teleop.cl2 + d.teleop.cl3 + d.teleop.cl4)
+        ),
+        "Processor": (data) => Aggregators.average(
+            data.map(d => d.teleop.prc)
+        ),
+        "Barge": (data) => Aggregators.average(
+            data.map(d => d.teleop.brg)
+        ),
+        "Total": (data) => Aggregators.average(
+            data.map(d => d.teleop.total)
+        ),
+    },
+    "Average Total Points": {
+        "Overall": (data) => Aggregators.average(
+            data.map(d => d.total)
+        ),
+    },
+    "Velocity": {
+        "Average Velocity": (_, traces) => Aggregators.average(
+            traces.map(trace => {
+                return trace.averageVelocity();
+            }),
+        ),
+        "Average Seconds Not Moving": (_, traces) => Aggregators.average(
+            traces.map(trace => {
+                return trace.secondsNotMoving(0.05);
+            }),
+        ),
+    }
+});
