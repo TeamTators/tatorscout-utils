@@ -17,18 +17,6 @@
   "author": "",
   "license": "ISC",
   "exports": {
-    ".": {
-      "import": "./lib/esm/index.js",
-      "require": "./lib/cjs/index.js"
-    },
-    "./2024-areas": {
-      "import": "./lib/esm/2024-areas.js",
-      "require": "./lib/cjs/2024-areas.js"
-    },
-    "./2025-areas": {
-      "import": "./lib/esm/2025-areas.js",
-      "require": "./lib/cjs/2025-areas.js"
-    },
     "./scout-groups": {
       "import": "./lib/esm/scout-groups.js",
       "require": "./lib/cjs/scout-groups.js"
@@ -40,6 +28,18 @@
     "./trace": {
       "import": "./lib/esm/trace.js",
       "require": "./lib/cjs/trace.js"
+    },
+    "./years": {
+      "import": "./lib/esm/years/index.js",
+      "require": "./lib/cjs/years/index.js"
+    },
+    "./years/2024": {
+      "import": "./lib/esm/years/2024.js",
+      "require": "./lib/cjs/years/2024.js"
+    },
+    "./years/2025": {
+      "import": "./lib/esm/years/2025.js",
+      "require": "./lib/cjs/years/2025.js"
     }
   },
   "dependencies": {
