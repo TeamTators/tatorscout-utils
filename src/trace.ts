@@ -374,6 +374,9 @@ export class Trace {
             } else {
                 parsed = data;
             }
+            if (Array.isArray(parsed)) {
+                return new Trace(Trace.expand(parsed as TraceArray));
+            }
             const res = z.object({
                 state: z.union([
                     z.literal('compressed'),
@@ -400,6 +403,8 @@ export class Trace {
                 const expandedTrace = TraceSchema.parse(res.trace);
                 return new Trace(expandedTrace as TraceArray);
             }
+
+            throw new Error('Invalid trace state');
         });
     }
 
