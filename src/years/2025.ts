@@ -2,6 +2,8 @@ import { Point2D } from "math/point";
 import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
+import { createTypedSummary, SummarySchema } from "../summary";
+import { $Math } from "ts-utils/math";
 
 /**
  * Global field zones for 2025 REEFSCAPE game

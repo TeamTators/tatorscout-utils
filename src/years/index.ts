@@ -159,7 +159,7 @@ export class YearInfo<
      * });
      * ```
      */
-    summary<S extends SummarySchema>(schema: S) {
+    summary<S extends SummarySchema<ParsedScoreBreakdown>>(schema: S) {
         return createTypedSummary<ParsedScoreBreakdown, S>(
             (trace) => this.parse(trace),
             schema

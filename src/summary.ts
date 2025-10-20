@@ -69,23 +69,23 @@ export const Aggregators = {
  * } as const;
  * ```
  */
-export interface SummarySchema {
+export interface SummarySchema<T> {
     [groupName: string]: {
-        [itemName: string]: (data: number[]) => number;
+        [itemName: string]: (data: T[]) => number;
     };
 }
 
 /** Extract group names from schema for type safety */
-type GroupNames<S extends SummarySchema> = keyof S;
+type GroupNames<T, S extends SummarySchema<T>> = keyof S;
 
 /** Extract item names for a specific group from schema */
-type ItemNames<S extends SummarySchema, G extends GroupNames<S>> = keyof S[G];
+type ItemNames<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> = keyof S[G];
 
 /** Generate the computed summary result type from schema definition */
-type ComputedSummaryType<S extends SummarySchema> = {
+type ComputedSummaryType<T, S extends SummarySchema<T>> = {
     [team: string]: {
-        [G in GroupNames<S>]: {
-            [I in ItemNames<S, G>]: number;
+        [G in GroupNames<T, S>]: {
+            [I in ItemNames<T, S, G>]: number;
         };
     };
 };
@@ -114,7 +114,7 @@ type ComputedSummaryType<S extends SummarySchema> = {
  * const results = summary.computeAll(teamTraces);
  * ```
  */
-export class Summary<T, S extends SummarySchema> {
+export class Summary<T, S extends SummarySchema<T>> {
     private readonly schema: S;
 
     /**
@@ -147,8 +147,8 @@ export class Summary<T, S extends SummarySchema> {
      * ```
      */
     computeSingle(traces: Trace[]): {
-        [G in GroupNames<S>]: {
-            [I in ItemNames<S, G>]: number;
+        [G in GroupNames<T, S>]: {
+            [I in ItemNames<T, S, G>]: number;
         };
     } {
         const results = traces.map(t => this.fn(t));
@@ -156,7 +156,7 @@ export class Summary<T, S extends SummarySchema> {
 
         // Process all groups from schema automatically
         for (const groupName in this.schema) {
-            const group = new Group(groupName, this.schema[groupName]);
+            const group = new Group<T, S, typeof groupName>(groupName, this.schema[groupName]);
             summary[groupName] = group.compute(results);
         }
 
@@ -182,8 +182,8 @@ export class Summary<T, S extends SummarySchema> {
      * const rankings = results.getAllRankings();
      * ```
      */
-    computeAll(data: { [team: string]: Trace[] }): ComputedSummary<S> {
-        const summary = {} as ComputedSummaryType<S>;
+    computeAll(data: { [team: string]: Trace[] }): ComputedSummary<T, S> {
+        const summary = {} as ComputedSummaryType<T, S>;
 
         for (const team in data) {
             summary[team] = this.computeSingle(data[team]);
@@ -201,7 +201,7 @@ export class Summary<T, S extends SummarySchema> {
  * @template S - Schema type
  * @template G - Group name type
  */
-class Group<T, S extends SummarySchema, G extends GroupNames<S>> {
+class Group<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> {
     /**
      * Creates a new Group processor
      * @param {G} name - Name of the group
@@ -218,13 +218,13 @@ class Group<T, S extends SummarySchema, G extends GroupNames<S>> {
      * @returns {Object} Computed metrics for this group
      */
     compute(data: T[]): {
-        [I in ItemNames<S, G>]: number;
+        [I in ItemNames<T, S, G>]: number;
     } {
         const result = {} as any;
         
         for (const itemName in this.itemDefinitions) {
             const fn = this.itemDefinitions[itemName];
-            result[itemName] = fn(data as number[]); // Type assertion needed here
+            result[itemName] = fn(data as T[]);
         }
         
         return result;
@@ -252,13 +252,13 @@ class Group<T, S extends SummarySchema, G extends GroupNames<S>> {
  * const topTeams = computed.getSortedTeams("Auto Performance", "Average Score");
  * ```
  */
-export class ComputedSummary<S extends SummarySchema> {
+export class ComputedSummary<T, S extends SummarySchema<T>> {
     /**
      * Creates a new ComputedSummary with team performance data
      * @param {ComputedSummaryType<S>} summary - Complete computed metrics for all teams
      */
     constructor(
-        public readonly summary: ComputedSummaryType<S>
+        public readonly summary: ComputedSummaryType<T, S>
     ) {}
 
     /**
@@ -299,7 +299,7 @@ export class ComputedSummary<S extends SummarySchema> {
      * const consistentTeams = computed.getSortedTeams("Performance", "Consistency", false);
      * ```
      */
-    getSortedTeams<G extends GroupNames<S>, I extends ItemNames<S, G>>(
+    getSortedTeams<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(
         group: G, 
         item: I, 
         descending = true
@@ -339,7 +339,7 @@ export class ComputedSummary<S extends SummarySchema> {
      * console.log(`League average: ${stats.average}`);
      * ```
      */
-    getGraphData<G extends GroupNames<S>, I extends ItemNames<S, G>>(
+    getGraphData<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(
         group: G, 
         item: I
     ): GraphData<G, I> {
@@ -371,8 +371,8 @@ export class ComputedSummary<S extends SummarySchema> {
      * ```
      */
     getRanking(team: string): {
-        [G in GroupNames<S>]: {
-            [I in ItemNames<S, G>]: number;
+        [G in GroupNames<T, S>]: {
+            [I in ItemNames<T, S, G>]: number;
         };
     } | null {
         const teamSummary = this.getTeam(team);
@@ -411,7 +411,7 @@ export class ComputedSummary<S extends SummarySchema> {
      * }
      * ```
      */
-    getRankForTeam<G extends GroupNames<S>, I extends ItemNames<S, G>>(
+    getRankForTeam<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(
         team: string, 
         group: G, 
         item: I
@@ -450,8 +450,8 @@ export class ComputedSummary<S extends SummarySchema> {
      */
     getAllRankings(): {
         [team: string]: {
-            [G in GroupNames<S>]: {
-                [I in ItemNames<S, G>]: number;
+            [G in GroupNames<T, S>]: {
+                [I in ItemNames<T, S, G>]: number;
             };
         };
     } {
@@ -488,11 +488,11 @@ export class ComputedSummary<S extends SummarySchema> {
  * );
  * ```
  */
-export function createTypedSummary<T, S extends SummarySchema>(
+export function createTypedSummary<T, S extends SummarySchema<T>>(
     fn: (data: Trace) => T,
     schema: S
 ) {
-    return new Summary(fn, schema);
+    return new Summary<T, S>(fn, schema);
 }
 
 /**
