@@ -307,6 +307,17 @@ export class Trace {
         return expanded;
     }
 
+    static getSection(point: P) {
+        if (!point) return null;
+
+        const [time] = point;
+        if (time < 15 * 4) return 'auto';
+        if (time < 135 * 4) return 'teleop';
+        if (time < 150 * 4) return 'endgame';
+
+        return null;
+    }
+
     /**
      * Removes redundant points from an expanded trace to create sparse representation
      * Eliminates consecutive points with same position and no action
