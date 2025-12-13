@@ -74,7 +74,13 @@ export const Aggregators = {
  */
 export interface SummarySchema<T> {
     [groupName: string]: {
-        [itemName: string]: (data: T[], trace: Trace[], matches: TBAMatch[]) => number;
+        // [itemName: string]: (data: T[], trace: Trace[], matches: TBAMatch[]) => number;
+        [itemName: string]: (data: {
+            matches: TBAMatch[];
+            traces: Trace[];
+            scoring: T[];
+            team: number;
+        }) => number;
     };
 }
 
@@ -164,7 +170,7 @@ export class Summary<T, S extends SummarySchema<T>> {
      * console.log(`Peak performance: ${metrics.Scoring.Peak}`);
      * ```
      */
-    computeSingle(traces: Trace[], matches: TBAMatch[]): {
+    computeSingle(team: number, traces: Trace[], matches: TBAMatch[]): {
         [G in GroupNames<T, S>]: {
             [I in ItemNames<T, S, G>]: number;
         };
@@ -175,7 +181,7 @@ export class Summary<T, S extends SummarySchema<T>> {
         // Process all groups from schema automatically
         for (const groupName in this.schema) {
             const group = new Group<T, S, typeof groupName>(groupName, this.schema[groupName]);
-            summary[groupName] = group.compute(results, traces, matches);
+            summary[groupName] = group.compute(team, results, traces, matches);
         }
 
         return summary;
@@ -205,7 +211,7 @@ export class Summary<T, S extends SummarySchema<T>> {
 
         for (const team in data) {
             const teamMatches = matches.filter(m => teamsFromMatch(m).includes(Number(team)));
-            summary[team] = this.computeSingle(data[team], teamMatches);
+            summary[team] = this.computeSingle(Number(team), data[team], teamMatches);
         }
 
         return new ComputedSummary({ schema: summary, extras: this.extras });
@@ -330,14 +336,20 @@ class Group<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> {
      * @param {T[]} data - Array of extracted data points
      * @returns {Object} Computed metrics for this group
      */
-    compute(data: T[], traces: Trace[], matches: TBAMatch[]): {
+    compute(team: number, data: T[], traces: Trace[], matches: TBAMatch[]): {
         [I in ItemNames<T, S, G>]: number;
     } {
         const result = {} as any;
         
         for (const itemName in this.itemDefinitions) {
             const fn = this.itemDefinitions[itemName];
-            result[itemName] = fn(data as T[], traces, matches);
+            // result[itemName] = fn(data as T[], traces, matches);
+            result[itemName] = fn({
+                matches,
+                traces,
+                scoring: data,
+                team,
+            });
         }
         
         return result;
