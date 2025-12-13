@@ -924,7 +924,7 @@ export class PivotSummary<T, S extends SummarySchema<T>> {
     ) {}
 
 
-    teamRanked(): { [group: string]: { [item: string]: { 
+    teamsRanked(): { [group: string]: { [item: string]: { 
         team: number;
         value: number;
     }[] } } {
