@@ -587,75 +587,6 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
     }
 
     /**
-     * Creates GraphData object for flexible visualization and sorting
-     * Returns a GraphData instance that can be sorted by different criteria after creation
-     * 
-     * @template G - Group name from schema
-     * @template I - Item name from the specified group  
-     * @param {G} group - Analysis group name
-     * @param {I} item - Specific metric within the group
-     * @returns {GraphData<G, I>} GraphData object with sorting and analysis methods
-     * 
-     * @example
-     * ```typescript
-     * const graphData = computed.getGraphData("Scoring", "Average Points");
-     * 
-     * // Sort by performance (best to worst)
-     * const performanceChart = graphData.sortByValue(true);
-     * 
-     * // Sort by team number for easy lookup
-     * const teamOrderChart = graphData.sortByTeam(false);
-     * 
-     * // Get statistics
-     * const stats = graphData.getStats();
-     * console.log(`League average: ${stats.average}`);
-     * ```
-     */
-    getGraphData<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(
-        group: G, 
-        item: I
-    ): GraphData<G, I> {
-        const teams = this.getAllTeams();
-        const rawData = teams
-            .filter(team => this.schemaData[team]?.[group]?.[item] !== undefined)
-            .map(team => ({
-                team: team,
-                value: this.schemaData[team][group][item]
-            }));
-
-        return new GraphData<G, I>(rawData, group, item);
-    }
-
-    /**
-     * Creates GraphData object for extra (non-typesafe) metrics
-     * @param {string} group - Extra group name
-     * @param {string} item - Extra item name
-     * @returns {GraphData<string, string>} GraphData object with sorting and analysis methods
-     * 
-     * @example
-     * ```typescript
-     * const driveRatingGraph = computed.getGraphDataForExtra("Manual Scouting", "Drive Rating");
-     * const sortedByRating = driveRatingGraph.sortByValue(true);
-     * 
-     * console.log(`Top rated drivers:`);
-     * sortedByRating.labels.slice(0, 5).forEach((team, i) => {
-     *   console.log(`${i + 1}. Team ${team}: ${sortedByRating.data[i]}`);
-     * });
-     * ```
-     */
-    getGraphDataForExtra(group: string, item: string): GraphData<string, string> {
-        const teams = this.getTeamsWithExtras();
-        const rawData = teams
-            .filter(team => this.extraData[team]?.[group]?.[item] !== undefined)
-            .map(team => ({
-                team,
-                value: this.extraData[team][group][item]
-            }));
-
-        return new GraphData<string, string>(rawData, group, item);
-    }
-
-    /**
      * Gets complete ranking information for a specific team across all metrics
      * Returns rankings (1-based) for every group and item in the schema
      * 
@@ -931,6 +862,29 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
             this.extraData[team][group][item] = value;
         });
     }
+
+    private _pivotedSummary: PivotSummary<T, S> | null = null;
+
+    pivot() {
+        // turns { team: { group: { item: value } } } into { group: { item: { team: value } } }
+        const pivoted: { [group: string]: { [item: string]: { [team: string]: number } } } = {};
+
+        for (const team in this.schemaData) {
+            for (const group in this.schemaData[team]) {
+                if (!pivoted[group]) {
+                    pivoted[group] = {};
+                }
+                for (const item in this.schemaData[team][group]) {
+                    if (!pivoted[group][item]) {
+                        pivoted[group][item] = {};
+                    }
+                    pivoted[group][item][team] = this.schemaData[team][group][item];
+                }
+            }
+        }
+
+        return new PivotSummary<T, S>(this, pivoted);
+    }
 }
 
 /**
@@ -963,265 +917,49 @@ export function createTypedSummary<T, S extends SummarySchema<T>>(
     return new Summary<T, S>(fn, schema);
 }
 
-/**
- * Flexible graph data container with multiple sorting and analysis options
- * Separates data collection from presentation, allowing the same data to be visualized
- * in different ways without recomputation
- * 
- * @template Group - Type of the group identifier
- * @template Item - Type of the item identifier
- * 
- * @example
- * ```typescript
- * const graphData = computed.getGraphData("Scoring", "Auto Average");
- * 
- * // Different visualization approaches
- * const leaderboard = graphData.sortByValue(true);        // Performance ranking
- * const byTeamNumber = graphData.sortByTeam(false);       // Numerical order
- * const original = graphData.original();                  // Collection order
- * 
- * // Statistical analysis
- * const stats = graphData.getStats();
- * const teamData = graphData.getTeamData("1234");
- * ```
- */
-export class GraphData<Group, Item> {
-    /**
-     * Creates a new GraphData instance
-     * @param {Array<{team: string; value: number}>} rawData - Raw team performance data
-     * @param {Group} group - Group identifier for this data set
-     * @param {Item} item - Item identifier for this metric
-     */
+export class PivotSummary<T, S extends SummarySchema<T>> {
     constructor(
-        private readonly rawData: { team: number; value: number }[],
-        public readonly group: Group,
-        public readonly item: Item
+        public readonly original: ComputedSummary<T, S>,
+        public readonly pivotedData: { [group: string]: { [item: string]: { [team: string]: number } } }
     ) {}
 
-    /**
-     * Sorts teams by their performance values (metric scores)
-     * Perfect for creating performance rankings and leaderboards
-     * 
-     * @param {boolean} [descending=true] - Sort order (true = best to worst, false = worst to best)
-     * @returns {Object} Sorted graph data with labels, values, and rankings
-     * 
-     * @example
-     * ```typescript
-     * const topPerformers = graphData.sortByValue(true);
-     * console.log(`#1 team: ${topPerformers.labels[0]} with ${topPerformers.data[0]} points`);
-     * 
-     * // Create leaderboard
-     * topPerformers.labels.forEach((team, i) => {
-     *   console.log(`#${i + 1}: Team ${team} - ${topPerformers.data[i]} points`);
-     * });
-     * ```
-     */
-    sortByValue(descending = true): {
-        labels: number[];
-        data: number[];
-        rankings: number[];
-        sortedBy: 'value';
-    } {
-        const sorted = [...this.rawData].sort((a, b) => 
-            descending ? b.value - a.value : a.value - b.value
-        );
-        
-        return {
-            labels: sorted.map(item => item.team),
-            data: sorted.map(item => item.value),
-            rankings: sorted.map((_, index) => index + 1),
-            sortedBy: 'value'
-        };
-    }
 
-    /**
-     * Sorts teams by their identifiers (team numbers or names)
-     * Useful for creating predictable orderings and easy team lookup
-     * 
-     * @param {boolean} [descending=false] - Sort order (false = ascending, true = descending)
-     * @returns {Object} Sorted graph data with performance rankings preserved
-     * 
-     * @example
-     * ```typescript
-     * const byTeamNumber = graphData.sortByTeam(false);
-     * // Results in team order like: [1234, 1357, 2468, 5678]
-     * 
-     * // Find specific team easily
-     * const teamIndex = byTeamNumber.labels.indexOf("1234");
-     * if (teamIndex !== -1) {
-     *   console.log(`Team 1234: ${byTeamNumber.data[teamIndex]} points, rank #${byTeamNumber.rankings[teamIndex]}`);
-     * }
-     * ```
-     */
-    sortByTeam(descending = false): {
-        labels: number[];
-        data: number[];
-        rankings: number[];
-        sortedBy: 'team';
-    } {
-        const sorted = [...this.rawData].sort((a, b) => {
-            // Try to parse as numbers first (for team numbers like "1234", "5678")
-            
-            if (!isNaN(a.team) && !isNaN(b.team)) {
-                return descending ? b.team - a.team : a.team - b.team;
+    teamRanks(): { [group: string]: { [item: string]: { [team: string]: number } } } {
+        const ranks: { [group: string]: { [item: string]: { [team: string]: number } } } = {};
+
+        for (const group in this.pivotedData) {
+            ranks[group] = {};
+            for (const item in this.pivotedData[group]) {
+                const teamValues = this.pivotedData[group][item];
+                const sortedTeams = Object.entries(teamValues)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([team]) => team);
+
+                ranks[group][item] = {};
+                sortedTeams.forEach((team, index) => {
+                    ranks[group][item][team] = index + 1; // 1-based rank
+                });
             }
-            
-            // Fall back to string comparison
-            return descending ? b.team.toString().localeCompare(a.team.toString()) : a.team.toString().localeCompare(b.team.toString());
-        });
-
-        // Calculate rankings based on performance, not display order
-        const valueRanked = this.sortByValue(true);
-        const rankings = sorted.map(item => 
-            valueRanked.labels.indexOf(item.team) + 1
-        );
-        
-        return {
-            labels: sorted.map(item => item.team),
-            data: sorted.map(item => item.value),
-            rankings: rankings,
-            sortedBy: 'team'
-        };
-    }
-
-    /**
-     * Returns data in original collection order without sorting
-     * Preserves the order teams were processed during summary computation
-     * 
-     * @returns {Object} Graph data in original order with performance rankings
-     * 
-     * @example
-     * ```typescript
-     * const originalOrder = graphData.original();
-     * // Maintains whatever order teams were in the original dataset
-     * 
-     * // Still provides ranking information
-     * console.log(`First processed team: ${originalOrder.labels[0]}, rank #${originalOrder.rankings[0]}`);
-     * ```
-     */
-    original(): {
-        labels: number[];
-        data: number[];
-        rankings: number[];
-        sortedBy: 'original';
-    } {
-        // Calculate rankings based on performance
-        const valueRanked = this.sortByValue(true);
-        const rankings = this.rawData.map(item => 
-            valueRanked.labels.indexOf(item.team) + 1
-        );
-
-        return {
-            labels: this.rawData.map(item => item.team),
-            data: this.rawData.map(item => item.value),
-            rankings: rankings,
-            sortedBy: 'original'
-        };
-    }
-
-    /**
-     * Generic sorting method that delegates to specific sort functions
-     * Provides programmatic access to different sorting strategies
-     * 
-     * @template K - Key type ('team' | 'value')
-     * @param {K} key - Sort key ('team' for alphabetical, 'value' for performance)  
-     * @param {boolean} [descending=false] - Sort order
-     * @returns {Object} Sorted graph data
-     * 
-     * @example
-     * ```typescript
-     * // Programmatic sorting based on user selection
-     * const sortKey = userPreference === 'performance' ? 'value' : 'team';
-     * const sorted = graphData.sortBy(sortKey, true);
-     * ```
-     */
-    sortBy<K extends keyof { team: string; value: number }>(
-        key: K,
-        descending = false
-    ): {
-        labels: string[];
-        data: number[];
-        rankings: number[];
-        sortedBy: K;
-    } {
-        if (key === 'value') {
-            return this.sortByValue(descending) as any;
         }
-        if (key === 'team') {
-            return this.sortByTeam(descending) as any;
+
+        return ranks;
+    }
+
+    teamSorted(): { [group: string]: { [item: string]: number[] } } {
+        const sorted: { [group: string]: { [item: string]: number[] } } = {};
+
+        for (const group in this.pivotedData) {
+            sorted[group] = {};
+            for (const item in this.pivotedData[group]) {
+                const teamValues = this.pivotedData[group][item];
+                const sortedTeams = Object.entries(teamValues)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([team]) => Number(team));
+
+                sorted[group][item] = sortedTeams;
+            }
         }
-        return this.original() as any;
-    }
 
-    /**
-     * Returns a copy of the raw data for custom processing
-     * Allows advanced analysis beyond the built-in sorting methods
-     * 
-     * @returns {Array<{team: string; value: number}>} Copy of raw team performance data
-     * 
-     * @example
-     * ```typescript
-     * const raw = graphData.getRawData();
-     * 
-     * // Custom analysis
-     * const topQuartile = raw
-     *   .sort((a, b) => b.value - a.value)
-     *   .slice(0, Math.ceil(raw.length * 0.25));
-     * 
-     * console.log(`Top 25% teams: ${topQuartile.map(t => t.team).join(', ')}`);
-     * ```
-     */
-    getRawData(): { team: number; value: number }[] {
-        return [...this.rawData];
-    }
-
-    /**
-     * Calculates comprehensive statistical summary of the performance data
-     * Provides insights into the distribution and characteristics of team performance
-     * 
-     * @returns {Object} Statistical summary including central tendency, spread, and range
-     * 
-     * @example
-     * ```typescript
-     * const stats = graphData.getStats();
-     * console.log(`League average: ${stats.average.toFixed(1)}`);
-     * console.log(`Top performer: ${stats.max}`);
-     * console.log(`Competitive balance: CV = ${stats.coefficientOfVariation.toFixed(2)}`);
-     * 
-     * if (stats.coefficientOfVariation < 0.3) {
-     *   console.log("Highly competitive field!");
-     * }
-     * ```
-     */
-    getStats() {
-        const values = this.rawData.map(item => item.value);
-        return {
-            count: values.length,
-            sum: Aggregators.sum(values),
-            average: Aggregators.average(values),
-            max: Aggregators.max(values),
-            min: Aggregators.min(values),
-            median: Aggregators.median(values),
-            standardDeviation: Aggregators.standardDeviation(values),
-            coefficientOfVariation: Aggregators.coefficientOfVarience(values)
-        };
-    }
-
-    /**
-     * Retrieves performance data and rank for a specific team
-     * Useful for detailed team reports and comparisons
-     */
-    getTeamData(team: number): { team: number; value: number; rank: number } | null {
-        const teamData = this.rawData.find(item => item.team === team);
-        if (!teamData) return null;
-
-        const valueRanked = this.sortByValue(true);
-        const rank = valueRanked.labels.indexOf(team) + 1;
-
-        return {
-            team: teamData.team,
-            value: teamData.value,
-            rank: rank
-        };
+        return sorted;
     }
 }
