@@ -1,6 +1,5 @@
 import { Trace } from "../trace";
 import { createTypedSummary, SummarySchema } from "../summary";
-import test from './2025';
 
 /**
  * Represents a polygon zone as an array of coordinate points [x, y]

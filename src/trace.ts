@@ -261,6 +261,19 @@ export class Trace {
         if (trace.length === 600) {
             return trace;
         }
+        if (trace.length > 600) {
+            // truncate to 600 points by removing duplicate time points
+            const seen = new Set<number>();
+            const truncated: TraceArray = [];
+            for (const point of trace) {
+                if (!seen.has(point[0]) && point[0] < 600) {
+                    truncated.push(point);
+                    seen.add(point[0]);
+                }
+                if (truncated.length === 600) break;
+            }
+            return truncated;
+        }
         // fill in missing points
         const expanded: TraceArray = [];
         for (let i = 0; i < trace.length - 1; i++) {
@@ -386,7 +399,7 @@ export class Trace {
                 parsed = data;
             }
             if (Array.isArray(parsed)) {
-                return new Trace(Trace.expand(parsed as TraceArray));
+                return new Trace(Trace.expand(TraceSchema.parse(parsed) as TraceArray));
             }
             const res = z.object({
                 state: z.union([
@@ -605,6 +618,11 @@ export class Trace {
         return notMovingCount / 4; // Convert to seconds
     }
 
+    /**
+     * Retrieves trace points for specified match section
+     * @param section Time section to retrieve
+     * @returns {TraceArray} Array of trace points for the section
+     */
     getSection(section: 'auto' | 'teleop' | 'endgame'): TraceArray {
         switch (section) {
             case 'auto':

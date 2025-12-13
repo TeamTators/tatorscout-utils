@@ -1,4 +1,6 @@
+import { attempt, Result } from "ts-utils/check";
 import { Trace } from "./trace";
+import { z } from 'zod';
 
 /**
  * Collection of commonly used statistical aggregation functions
@@ -47,7 +49,7 @@ export const Aggregators = {
         const stdDev = Aggregators.standardDeviation(data);
         return stdDev / avg;
     }
- } as const;
+} as const;
 
 /**
  * Schema definition for type-safe summary analysis
@@ -76,10 +78,10 @@ export interface SummarySchema<T> {
 }
 
 /** Extract group names from schema for type safety */
-type GroupNames<T, S extends SummarySchema<T>> = keyof S;
+type GroupNames<T, S extends SummarySchema<T>> = Extract<keyof S, string>;
 
 /** Extract item names for a specific group from schema */
-type ItemNames<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> = keyof S[G];
+type ItemNames<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> = Extract<keyof S[G], string>;
 
 /** Generate the computed summary result type from schema definition */
 type ComputedSummaryType<T, S extends SummarySchema<T>> = {
@@ -265,6 +267,41 @@ export class Summary<T, S extends SummarySchema<T>> {
     }
 
     private extras: Extra = {};
+
+    /**
+     * Deserializes a ComputedSummary from a JSON string
+     * @param serialized - JSON string representation of a ComputedSummary
+     * @returns {Result<ComputedSummary<T, S>>} Result containing the deserialized ComputedSummary or an error
+     */
+    deserialize(serialized: string): Result<ComputedSummary<T, S>> {
+        return attempt<ComputedSummary<T, S>>(() => {
+            const parsed = z.object({
+                schema: z.record(z.record(z.record(z.number()))),
+                extras: z.record(z.record(z.record(z.number()))),
+            }).parse(JSON.parse(serialized)) as CombinedSummaryType<T, S>;
+
+            // ensure all groups and items match schema, if there are any extras it's still valid.
+            for (const team in parsed.schema) {
+                for (const group in this.schema) {
+                    if (!(group in parsed.schema[team])) {
+                        throw new Error(`Missing group '${group}' in team '${team}'`);
+                    } else {
+                        for (const item in this.schema[group]) {
+                            if (!(item in parsed.schema[team][group])) {
+                                throw new Error(`Missing item '${item}' in group '${group}' for team '${team}'`);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // extras cannot be validated since they are freeform
+
+            this.extras = parsed.extras;
+
+            return new ComputedSummary<T, S>(parsed);
+        });
+    }
 }
 
 /**
@@ -327,8 +364,8 @@ class Group<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> {
  * ```
  */
 export class ComputedSummary<T, S extends SummarySchema<T>> {
-    private readonly schemaData: ComputedSummaryType<T, S>;
-    private readonly extraData: Extra;
+    readonly schemaData: ComputedSummaryType<T, S>;
+    readonly extraData: Extra;
 
     /**
      * Creates a new ComputedSummary with team performance data
@@ -339,12 +376,37 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         this.extraData = data.extras;
     }
 
-    /**
-     * @deprecated Use schemaData property directly or new methods. Will be removed in next version.
-     * @internal
-     */
-    get summary(): ComputedSummaryType<T, S> {
-        return this.schemaData;
+    get summary() {
+        const teams = this.getAllTeams();
+
+        const summary: {
+            [team: string]: {
+                [group in GroupNames<T, S> & string]: {
+                    [I in ItemNames<T, S, group> & string]: number;
+                }
+            }
+        } = {};
+
+        for (const team of teams) {
+            summary[team] = {
+                ...this.schemaData[team],
+            }
+            if (this.extraData[team]) {
+                for (const group in this.extraData[team]) {
+                    if (!summary[team][group]) {
+                        (summary[team] as any)[group] = {};
+                    } else {
+                        // if group exists in schema, merge items
+                        (summary[team] as any)[group] = { 
+                            ...summary[team][group],
+                            ...this.extraData[team][group],
+                        };
+                    }
+                }
+            }
+        }
+
+        return summary;
     }
 
     /**
@@ -352,8 +414,8 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * @param {string} team - Team identifier
      * @returns {Object | undefined} Team's computed metrics from schema or undefined if team not found
      */
-    getTeam(team: string) {
-        return this.schemaData[team];
+    getTeam(team: number) {
+        return this.schemaData[String(team)];
     }
 
     /**
@@ -369,7 +431,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * }
      * ```
      */
-    getTeamExtras(team: string): { [group: string]: { [item: string]: number } } | undefined {
+    getTeamExtras(team: number): { [group: string]: { [item: string]: number } } | undefined {
         return this.extraData[team];
     }
 
@@ -408,18 +470,18 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * Gets list of all team identifiers in the summary (schema + extras)
      * @returns {string[]} Array of team names/numbers
      */
-    getAllTeams(): string[] {
+    getAllTeams(): number[] {
         const schemaTeams = new Set(Object.keys(this.schemaData));
         const extraTeams = new Set(Object.keys(this.extraData));
-        return [...new Set([...schemaTeams, ...extraTeams])];
+        return [...new Set([...schemaTeams, ...extraTeams])].map(Number);
     }
 
     /**
      * Gets list of team identifiers that have extra data
      * @returns {string[]} Array of team names/numbers with extra metrics
      */
-    getTeamsWithExtras(): string[] {
-        return Object.keys(this.extraData);
+    getTeamsWithExtras(): number[] {
+        return Object.keys(this.extraData).map(Number);
     }
 
     /**
@@ -474,7 +536,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         group: G, 
         item: I, 
         descending = true
-    ): string[] {
+    ): number[] {
         const teams = this.getAllTeams();
         return teams
             .filter(team => this.schemaData[team]?.[group]?.[item] !== undefined)
@@ -499,7 +561,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * console.log(`Best drivers: ${topDrivers.slice(0, 3).join(', ')}`);
      * ```
      */
-    getSortedTeamsByExtra(group: string, item: string, descending = true): string[] {
+    getSortedTeamsByExtra(group: string, item: string, descending = true): number[] {
         const teams = this.getTeamsWithExtras();
         return teams
             .filter(team => this.extraData[team]?.[group]?.[item] !== undefined)
@@ -572,7 +634,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         const rawData = teams
             .filter(team => this.extraData[team]?.[group]?.[item] !== undefined)
             .map(team => ({
-                team: team,
+                team,
                 value: this.extraData[team][group][item]
             }));
 
@@ -595,7 +657,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * }
      * ```
      */
-    getRanking(team: string): {
+    getRanking(team: number): {
         [G in GroupNames<T, S>]: {
             [I in ItemNames<T, S, G>]: number;
         };
@@ -629,7 +691,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * }
      * ```
      */
-    getExtraRankings(team: string): { [group: string]: { [item: string]: number } } | null {
+    getExtraRankings(team: number): { [group: string]: { [item: string]: number } } | null {
         const teamExtras = this.getTeamExtras(team);
         if (!teamExtras) return null;
 
@@ -652,7 +714,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * @param {string} item - Extra item name
      * @returns {number} Team's rank (1 = best, -1 if team/metric not found)
      */
-    getRankForTeamExtra(team: string, group: string, item: string): number {
+    getRankForTeamExtra(team: number, group: string, item: string): number {
         const teamValue = this.extraData[team]?.[group]?.[item];
         if (teamValue === undefined) return -1;
 
@@ -686,7 +748,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * ```
      */
     getRankForTeam<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(
-        team: string, 
+        team: number, 
         group: G, 
         item: I
     ): number {
@@ -772,6 +834,89 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
 
         return allRankings;
     }
+
+    /**
+     * Serializes the ComputedSummary to a JSON string
+     * @returns Serialized JSON string
+     */
+    serialize(): string {
+        return JSON.stringify({
+            schemaData: this.schemaData,
+            extraData: this.extraData,
+        });
+    }
+
+    /**
+     * Updates a specific metric value for a team in the schema data
+     * @param {number} team - Team identifier
+     * @param {G} group - Analysis group name
+     * @param {I} item - Specific metric within the group
+     * @param {number} value - New metric value to set
+     * @returns {Result<void>} Result indicating success or failure of the update
+     * 
+     * @example
+     * ```typescript
+     * const result = computed.update(1234, "Scoring", "Average", 42.5);
+     * if (result.isOk()) {
+     *   console.log("Update successful!");
+     * } else {
+     *   console.error("Update failed:", result.error);
+     * }
+     * ```
+     */
+    update(team: number, group: GroupNames<T, S>, item: ItemNames<T, S, typeof group>, value: number) {
+        return attempt(() => {
+            if (!this.schemaData[team]) {
+                throw new Error(`Team ${team} does not exist in summary data.`);
+            }
+
+            if (!this.schemaData[team][group]) {
+                throw new Error(`Group '${group}' does not exist for team ${team}.`);
+            }
+
+            if (item in this.schemaData[team][group] === undefined) {
+                throw new Error(`Item '${item}' does not exist in group '${group}' for team ${team}.`);
+            }
+
+            this.schemaData[team][group][item] = value;
+        });
+    }
+
+    /**
+     * Updates a specific metric value for a team in the extra data
+     * @param {number} team - Team identifier
+     * @param {string} group - Extra group name
+     * @param {string} item - Extra item name
+     * @param {number} value - New metric value to set
+     * @returns {Result<void>} Result indicating success or failure of the update
+     * 
+     * @example
+     * ```typescript
+     * const result = computed.updateExtra(1234, "Manual Scouting", "Drive Rating", 9.0);
+     * if (result.isOk()) {
+     *   console.log("Extra update successful!");
+     * } else {
+     *   console.error("Extra update failed:", result.error);
+     * }
+     * ```
+     */
+    updateExtra(team: number, group: string, item: string, value: number) {
+        return attempt(() => {
+            if (!this.extraData[team]) {
+                throw new Error(`Team ${team} does not have any extra data.`);
+            }
+
+            if (!this.extraData[team][group]) {
+                throw new Error(`Group '${group}' does not exist for team ${team} in extra data.`);
+            }
+
+            if (item in this.extraData[team][group] === undefined) {
+                throw new Error(`Item '${item}' does not exist in group '${group}' for team ${team} in extra data.`);
+            }
+
+            this.extraData[team][group][item] = value;
+        });
+    }
 }
 
 /**
@@ -834,7 +979,7 @@ export class GraphData<Group, Item> {
      * @param {Item} item - Item identifier for this metric
      */
     constructor(
-        private readonly rawData: { team: string; value: number }[],
+        private readonly rawData: { team: number; value: number }[],
         public readonly group: Group,
         public readonly item: Item
     ) {}
@@ -858,7 +1003,7 @@ export class GraphData<Group, Item> {
      * ```
      */
     sortByValue(descending = true): {
-        labels: string[];
+        labels: number[];
         data: number[];
         rankings: number[];
         sortedBy: 'value';
@@ -895,22 +1040,20 @@ export class GraphData<Group, Item> {
      * ```
      */
     sortByTeam(descending = false): {
-        labels: string[];
+        labels: number[];
         data: number[];
         rankings: number[];
         sortedBy: 'team';
     } {
         const sorted = [...this.rawData].sort((a, b) => {
             // Try to parse as numbers first (for team numbers like "1234", "5678")
-            const aNum = parseInt(a.team);
-            const bNum = parseInt(b.team);
             
-            if (!isNaN(aNum) && !isNaN(bNum)) {
-                return descending ? bNum - aNum : aNum - bNum;
+            if (!isNaN(a.team) && !isNaN(b.team)) {
+                return descending ? b.team - a.team : a.team - b.team;
             }
             
             // Fall back to string comparison
-            return descending ? b.team.localeCompare(a.team) : a.team.localeCompare(b.team);
+            return descending ? b.team.toString().localeCompare(a.team.toString()) : a.team.toString().localeCompare(b.team.toString());
         });
 
         // Calculate rankings based on performance, not display order
@@ -943,7 +1086,7 @@ export class GraphData<Group, Item> {
      * ```
      */
     original(): {
-        labels: string[];
+        labels: number[];
         data: number[];
         rankings: number[];
         sortedBy: 'original';
@@ -1014,7 +1157,7 @@ export class GraphData<Group, Item> {
      * console.log(`Top 25% teams: ${topQuartile.map(t => t.team).join(', ')}`);
      * ```
      */
-    getRawData(): { team: string; value: number }[] {
+    getRawData(): { team: number; value: number }[] {
         return [...this.rawData];
     }
 
@@ -1054,7 +1197,7 @@ export class GraphData<Group, Item> {
      * Retrieves performance data and rank for a specific team
      * Useful for detailed team reports and comparisons
      */
-    getTeamData(team: string): { team: string; value: number; rank: number } | null {
+    getTeamData(team: number): { team: number; value: number; rank: number } | null {
         const teamData = this.rawData.find(item => item.team === team);
         if (!teamData) return null;
 

@@ -33,13 +33,13 @@
       "import": "./lib/esm/years/index.js",
       "require": "./lib/cjs/years/index.js"
     },
-    "./years/2024": {
-      "import": "./lib/esm/years/2024.js",
-      "require": "./lib/cjs/years/2024.js"
+    "./years/*": {
+      "import": "./lib/esm/years/*",
+      "require": "./lib/cjs/years/*"
     },
-    "./years/2025": {
-      "import": "./lib/esm/years/2025.js",
-      "require": "./lib/cjs/years/2025.js"
+    "./summary": {
+      "import": "./lib/esm/summary.js",
+      "require": "./lib/cjs/summary.js"
     }
   },
   "dependencies": {
@@ -55,7 +55,7 @@
     "uuid": "^11.0.5",
     "zod": "^3.24.1",
 		"math": "github:tsaxking/calculations",
-		"ts-utils": "github:tsaxking/global-ts-utilities"
+		"ts-utils": "github:tsaxking/global-ts-utilities#v1.0.9"
   },
   "devDependencies": {
     "@esbuild-kit/esm-loader": "^2.6.5",
