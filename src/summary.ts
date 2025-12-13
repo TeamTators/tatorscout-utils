@@ -1,6 +1,7 @@
 import { attempt, Result } from "ts-utils/check";
 import { Trace } from "./trace";
 import { z } from 'zod';
+import { TBAMatch, teamsFromMatch } from "./tba";
 
 /**
  * Collection of commonly used statistical aggregation functions
@@ -73,7 +74,7 @@ export const Aggregators = {
  */
 export interface SummarySchema<T> {
     [groupName: string]: {
-        [itemName: string]: (data: T[], trace: Trace[]) => number;
+        [itemName: string]: (data: T[], trace: Trace[], matches: TBAMatch[]) => number;
     };
 }
 
@@ -163,7 +164,7 @@ export class Summary<T, S extends SummarySchema<T>> {
      * console.log(`Peak performance: ${metrics.Scoring.Peak}`);
      * ```
      */
-    computeSingle(traces: Trace[]): {
+    computeSingle(traces: Trace[], matches: TBAMatch[]): {
         [G in GroupNames<T, S>]: {
             [I in ItemNames<T, S, G>]: number;
         };
@@ -174,7 +175,7 @@ export class Summary<T, S extends SummarySchema<T>> {
         // Process all groups from schema automatically
         for (const groupName in this.schema) {
             const group = new Group<T, S, typeof groupName>(groupName, this.schema[groupName]);
-            summary[groupName] = group.compute(results, traces);
+            summary[groupName] = group.compute(results, traces, matches);
         }
 
         return summary;
@@ -199,11 +200,12 @@ export class Summary<T, S extends SummarySchema<T>> {
      * const rankings = results.getAllRankings();
      * ```
      */
-    computeAll(data: { [team: string]: Trace[] }): ComputedSummary<T, S> {
+    computeAll(data: { [team: string]: Trace[] }, matches: TBAMatch[]): ComputedSummary<T, S> {
         const summary = {} as ComputedSummaryType<T, S>;
 
         for (const team in data) {
-            summary[team] = this.computeSingle(data[team]);
+            const teamMatches = matches.filter(m => teamsFromMatch(m).includes(Number(team)));
+            summary[team] = this.computeSingle(data[team], teamMatches);
         }
 
         return new ComputedSummary({ schema: summary, extras: this.extras });
@@ -328,14 +330,14 @@ class Group<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> {
      * @param {T[]} data - Array of extracted data points
      * @returns {Object} Computed metrics for this group
      */
-    compute(data: T[], traces: Trace[]): {
+    compute(data: T[], traces: Trace[], matches: TBAMatch[]): {
         [I in ItemNames<T, S, G>]: number;
     } {
         const result = {} as any;
         
         for (const itemName in this.itemDefinitions) {
             const fn = this.itemDefinitions[itemName];
-            result[itemName] = fn(data as T[], traces);
+            result[itemName] = fn(data as T[], traces, matches);
         }
         
         return result;
