@@ -188,6 +188,7 @@ type ParsedScoreBreakdown2024 = Readonly<{
     teleop: {
         spk: number;
         amp: number;
+        lob: number;
         total: number;
     };
     endgame: {
@@ -293,6 +294,7 @@ class YearInfo2024 extends YearInfo<
                 if (p[3] === 'amp') score.teleop.amp += teleop.amp;
                 if (p[3] === 'clb') score.endgame.clb += endgame.clb;
                 if (p[3] === 'trp') score.endgame.trp += endgame.trp;
+                if (p[3] === 'lob') score.teleop.lob += teleop.lob;
             }
         }
 
