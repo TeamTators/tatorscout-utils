@@ -924,8 +924,11 @@ export class PivotSummary<T, S extends SummarySchema<T>> {
     ) {}
 
 
-    teamRanks(): { [group: string]: { [item: string]: { [team: string]: number } } } {
-        const ranks: { [group: string]: { [item: string]: { [team: string]: number } } } = {};
+    teamRanked(): { [group: string]: { [item: string]: { 
+        team: number;
+        value: number;
+    }[] } } {
+        const ranks: { [group: string]: { [item: string]: { team: number; value: number }[] } } = {};
 
         for (const group in this.pivotedData) {
             ranks[group] = {};
@@ -935,18 +938,24 @@ export class PivotSummary<T, S extends SummarySchema<T>> {
                     .sort((a, b) => b[1] - a[1])
                     .map(([team]) => team);
 
-                ranks[group][item] = {};
-                sortedTeams.forEach((team, index) => {
-                    ranks[group][item][team] = index + 1; // 1-based rank
-                });
+                ranks[group][item] = sortedTeams.map((team, index) => ({
+                    team: Number(team),
+                    value: teamValues[team],
+                }) );
             }
         }
 
         return ranks;
     }
 
-    teamSorted(): { [group: string]: { [item: string]: number[] } } {
-        const sorted: { [group: string]: { [item: string]: number[] } } = {};
+    teamSorted(): { [group: string]: { [item: string]: {
+        team: number;
+        value: number;
+    }[] } } {
+        const sorted: { [group: string]: { [item: string]: {
+            team: number;
+            value: number;
+        }[] } } = {};
 
         for (const group in this.pivotedData) {
             sorted[group] = {};
@@ -955,8 +964,10 @@ export class PivotSummary<T, S extends SummarySchema<T>> {
                 const sortedTeams = Object.entries(teamValues)
                     .sort((a, b) => b[1] - a[1])
                     .map(([team]) => Number(team));
-
-                sorted[group][item] = sortedTeams;
+                sorted[group][item] = sortedTeams.map(team => ({
+                    team,
+                    value: teamValues[String(team)],
+                }));
             }
         }
 
