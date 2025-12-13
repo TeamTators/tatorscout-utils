@@ -1,5 +1,7 @@
 import { Trace } from "../trace";
 import { createTypedSummary, SummarySchema } from "../summary";
+import { TBAMatch } from "../tba";
+import { attempt, Result } from "ts-utils/check";
 
 /**
  * Represents a polygon zone as an array of coordinate points [x, y]
@@ -102,6 +104,18 @@ export class YearInfo<
         public readonly actions: Record<Actions, string>,
         public readonly scoreBreakdown: Score,
     ) {
+    }
+
+    /**
+     * Parse a match object into a structured format for this year
+     * Override in subclasses to implement year-specific parsing logic
+     * @param {TBAMatch} _match - The match to parse as a year
+     * @returns {Result<TBAMatch>} The parsed match object
+     */
+    parseMatch(_match: TBAMatch): Result<unknown> {
+        return attempt(() => {
+            throw new Error('parseMatch not implemented for this year');
+        });
     }
 
     /**

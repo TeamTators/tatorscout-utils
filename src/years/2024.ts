@@ -2,6 +2,8 @@ import { Point2D } from "math/point";
 import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
+import { attempt, Result } from "ts-utils/check";
+import { Match2024Schema, TBAMatch, TBAMatch2024 } from "../tba";
 
 /**
  * Global field zones for 2024 CRESCENDO game
@@ -222,6 +224,12 @@ class YearInfo2024 extends YearInfo<
     typeof scoreBreakdown2024,
     ParsedScoreBreakdown2024
 > {
+    parseMatch(match: TBAMatch): Result<TBAMatch2024> {
+        return attempt(() => {
+            return Match2024Schema.parse(match);
+        });
+    }
+
     /**
      * Determines alliance based on robot's starting position
      * Uses the first trace point to check which alliance zone the robot starts in

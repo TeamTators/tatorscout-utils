@@ -204,6 +204,10 @@ export const matchSort = (a: TBAMatch, b: TBAMatch) => {
     return a.match_number - b.match_number;
 };
 
+export const Match2024Schema = z.object({});
+
+export type TBAMatch2024 = z.infer<typeof Match2024Schema>;
+
 /**
  * Comprehensive Zod schema for 2025 REEFSCAPE match data
  * Includes detailed score breakdown with coral placement, algae processing, and endgame scoring

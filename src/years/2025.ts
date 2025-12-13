@@ -4,6 +4,9 @@ import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { Aggregators, createTypedSummary, SummarySchema } from "../summary";
 import { $Math } from "ts-utils/math";
+import { TBAMatch } from "../tba";
+import { attempt } from "ts-utils/check";
+import { Match2025Schema } from "../tba";
 
 /**
  * Global field zones for 2025 REEFSCAPE game
@@ -222,6 +225,11 @@ class YearInfo2025 extends YearInfo<
     typeof scoreBreakdown2025,
     ParsedScoreBreakdown2025
 > {
+    parseMatch(match: TBAMatch) {
+        return attempt(() => {
+            return Match2025Schema.parse(match);
+        });
+    }
 
     /**
      * Determines alliance based on robot's starting position
