@@ -786,8 +786,8 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      */
     serialize(): string {
         return JSON.stringify({
-            schemaData: this.schemaData,
-            extraData: this.extraData,
+            schema: this.schemaData,
+            extra: this.extraData,
         });
     }
 
