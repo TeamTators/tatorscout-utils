@@ -2,11 +2,20 @@ import { z } from 'zod';
 import { type TBAMatch, type TBATeam } from './tba';
 
 /**
- * Returns an array of team numbers from a match
+ * Extracts team numbers from a TBA match object
+ * Returns teams in alliance order: [red1, red2, red3, blue1, blue2, blue3]
  *
- * @param {TBAMatch} match The match to destructure
- *
- * @returns {[number, number, number, number, number, number]} The team numbers
+ * @param {TBAMatch} match - The Blue Alliance match object to destructure
+ * @returns {[number, number, number, number, number, number]} Array of 6 team numbers
+ * 
+ * @example
+ * ```typescript
+ * const teams = destructureMatch(match);
+ * // teams = [1234, 5678, 9012, 3456, 7890, 1357]
+ * //          red1  red2  red3  blue1 blue2 blue3
+ * 
+ * const [red1, red2, red3, blue1, blue2, blue3] = teams;
+ * ```
  */
 export const destructureMatch = (
     match: TBAMatch
@@ -18,12 +27,15 @@ export const destructureMatch = (
 };
 
 /**
- * Assignment of teams to scout groups and matches
+ * Complete assignment of teams to scout groups and match responsibilities
+ * Represents the output of scout group generation algorithm
  *
  * @typedef {Assignment}
  */
 export type Assignment = {
+    /** Array of 6 scout groups, each containing team numbers assigned to that position */
     groups: number[][];
+    /** Match-by-match assignments for each scout position [red1, red2, red3, blue1, blue2, blue3] */
     matchAssignments: [
         number[],
         number[],
@@ -32,9 +44,14 @@ export type Assignment = {
         number[],
         number[]
     ];
+    /** Number of scheduling conflicts that had to be resolved */
     interferences: number;
 };
 
+/**
+ * Zod schema for validating Assignment objects
+ * Ensures proper structure of scout group assignments
+ */
 export const AssignmentSchema = z.object({
     groups: z.array(z.array(z.number())),
     matchAssignments: z.tuple([
@@ -49,12 +66,30 @@ export const AssignmentSchema = z.object({
 });
 
 /**
- * Generates scout groups from a list of teams and matches
+ * Generates optimal scout group assignments from teams and qualification matches
+ * Distributes teams across 6 scout positions to minimize scheduling conflicts
+ * 
+ * Algorithm:
+ * 1. Sorts teams and qualification matches by number
+ * 2. Assigns teams to positions based on match participation
+ * 3. Resolves conflicts by redistributing teams
+ * 4. Ensures every match has a scout for each position
  *
- * @param {TBATeam[]} teams The teams to generate scout groups for
- * @param {TBAMatch[]} matches The matches to generate scout groups for
- *
- * @returns {Assignment} The generated assignment
+ * @param {TBATeam[]} teams - All teams participating in the event
+ * @param {TBAMatch[]} matches - All matches from the event (only qm matches used)
+ * @returns {Assignment} Complete scout group assignment with conflict count
+ * 
+ * @example
+ * ```typescript
+ * const assignment = generateScoutGroups(eventTeams, eventMatches);
+ * 
+ * console.log(`Generated ${assignment.groups.length} scout groups`);
+ * console.log(`Resolved ${assignment.interferences} scheduling conflicts`);
+ * 
+ * // Access specific scout group
+ * const red1Teams = assignment.groups[0]; // Teams assigned to red alliance position 1
+ * const red1Schedule = assignment.matchAssignments[0]; // Which teams scout which matches
+ * ```
  */
 export const generateScoutGroups = (
     teams: TBATeam[],
@@ -136,7 +171,8 @@ export const generateScoutGroups = (
 };
 
 /**
- * Status of an assignment
+ * Enumeration of possible assignment validation errors
+ * Used by testAssignments to identify specific problems
  *
  * @typedef {AssignmentStatus}
  */
@@ -148,7 +184,8 @@ export type AssignmentStatus =
     | 'duplicate-between-matches';
 
 /**
- * Status of an assignment, including data
+ * Result of assignment validation with error details
+ * Provides structured feedback on assignment validity
  *
  * @typedef {Status}
  */
@@ -166,11 +203,25 @@ export type Status =
       };
 
 /**
- * Tests an assignment for errors
+ * Validates a scout group assignment for correctness and completeness
+ * Checks for common errors like duplicate assignments and missing scouts
  *
- * @param {Assignment} assignment The assignment to test
- *
- * @returns {Status} The status of the assignment
+ * @param {Assignment} assignment - Assignment to validate
+ * @returns {Status} Validation result with error details if any
+ * 
+ * @example
+ * ```typescript
+ * const assignment = generateScoutGroups(teams, matches);
+ * const validation = testAssignments(assignment);
+ * 
+ * if (validation.status === 'ok') {
+ *   console.log('Assignment is valid!');
+ * } else if (validation.status === 'error') {
+ *   console.error('Validation failed:', validation.error.message);
+ * } else {
+ *   console.warn(`Assignment issue: ${validation.status}`, validation.data);
+ * }
+ * ```
  */
 export const testAssignments = (assignment: Assignment): Status => {
     // ensure no duplicates in scout lists

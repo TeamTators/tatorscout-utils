@@ -17,18 +17,6 @@
   "author": "",
   "license": "ISC",
   "exports": {
-    ".": {
-      "import": "./lib/esm/index.js",
-      "require": "./lib/cjs/index.js"
-    },
-    "./2024-areas": {
-      "import": "./lib/esm/2024-areas.js",
-      "require": "./lib/cjs/2024-areas.js"
-    },
-    "./2025-areas": {
-      "import": "./lib/esm/2025-areas.js",
-      "require": "./lib/cjs/2025-areas.js"
-    },
     "./scout-groups": {
       "import": "./lib/esm/scout-groups.js",
       "require": "./lib/cjs/scout-groups.js"
@@ -40,6 +28,18 @@
     "./trace": {
       "import": "./lib/esm/trace.js",
       "require": "./lib/cjs/trace.js"
+    },
+    "./years": {
+      "import": "./lib/esm/years/index.js",
+      "require": "./lib/cjs/years/index.js"
+    },
+    "./years/*": {
+      "import": "./lib/esm/years/*",
+      "require": "./lib/cjs/years/*"
+    },
+    "./summary": {
+      "import": "./lib/esm/summary.js",
+      "require": "./lib/cjs/summary.js"
     }
   },
   "dependencies": {
@@ -55,7 +55,7 @@
     "uuid": "^11.0.5",
     "zod": "^3.24.1",
 		"math": "github:tsaxking/calculations",
-		"ts-utils": "github:tsaxking/global-ts-utilities"
+		"ts-utils": "github:tsaxking/global-ts-utilities#v1.0.9"
   },
   "devDependencies": {
     "@esbuild-kit/esm-loader": "^2.6.5",
