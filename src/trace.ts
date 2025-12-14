@@ -33,12 +33,12 @@ export class TraceError extends Error {
 /**
  * Zod schema for validating decompressed trace data
  * Ensures trace points have valid structure and value ranges
- * - Index: 0-600 (quarter-second intervals in a match)
+ * - Index: 0-660 (quarter-second intervals in a match and buffer)
  * - X/Y coordinates: 0-1 (normalized field positions)
  * - Action: string code or 0 (no action)
  */
 export const TraceSchema = z.array(z.tuple([
-    z.number().min(0).max(600).int(),
+    z.number().min(0).max(640).int(),
     z.number().min(0).max(1),
     z.number().min(0).max(1),
     z.union([
@@ -258,19 +258,19 @@ export class Trace {
      * ```
      */
     static expand(trace: TraceArray) {
-        if (trace.length === 600) {
+        if (trace.length === 640) {
             return trace;
         }
-        if (trace.length > 600) {
-            // truncate to 600 points by removing duplicate time points
+        if (trace.length > 640) {
+            // truncate to 640 points by removing duplicate time points
             const seen = new Set<number>();
             const truncated: TraceArray = [];
             for (const point of trace) {
-                if (!seen.has(point[0]) && point[0] < 600) {
+                if (!seen.has(point[0]) && point[0] < 640) {
                     truncated.push(point);
                     seen.add(point[0]);
                 }
-                if (truncated.length === 600) break;
+                if (truncated.length === 640) break;
             }
             return truncated;
         }
@@ -305,7 +305,7 @@ export class Trace {
         try {
             remaining.push(
                 ...(Array.from({
-                    length: 600 - lastPoint[0] - 1
+                    length: 640 - lastPoint[0] - 1
                 }).map((_, i) => {
                     return [lastPoint[0] + i + 1, lastPoint[1], lastPoint[2], 0];
                 }) as TraceArray)
@@ -449,8 +449,8 @@ export class Trace {
     constructor(
         public readonly points: z.infer<typeof TraceSchema>
     ) {
-        if (points.length !== 600) {
-            throw new Error(`Trace must have exactly 600 points. Got ${points.length}`);
+        if (points.length !== 640) {
+            throw new Error(`Trace must have exactly 640 points. Got ${points.length}`);
         }
     }
 
