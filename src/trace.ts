@@ -33,7 +33,7 @@ export class TraceError extends Error {
 /**
  * Zod schema for validating decompressed trace data
  * Ensures trace points have valid structure and value ranges
- * - Index: 0-660 (quarter-second intervals in a match and buffer)
+ * - Index: 0-640 (quarter-second intervals in a match and buffer)
  * - X/Y coordinates: 0-1 (normalized field positions)
  * - Action: string code or 0 (no action)
  */
@@ -298,14 +298,14 @@ export class Trace {
             expanded.push(...filler);
         }
 
-        // fill in the remaining points to reach 600
+        // fill in the remaining points to reach 640
         const lastPoint = trace[trace.length - 1];
         const remaining: TraceArray = [];
 
         try {
             remaining.push(
                 ...(Array.from({
-                    length: 640 - lastPoint[0] - 1
+                    length: 639 - lastPoint[0]
                 }).map((_, i) => {
                     return [lastPoint[0] + i + 1, lastPoint[1], lastPoint[2], 0];
                 }) as TraceArray)
