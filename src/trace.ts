@@ -399,6 +399,17 @@ export class Trace {
                 parsed = data;
             }
             if (Array.isArray(parsed)) {
+                const clamp = (num: number, min: number, max: number) => {
+                    return Math.min(Math.max(num, min), max);
+                }
+                parsed = parsed.map(([i, x, y, a]) => {
+                    return [
+                        i,
+                        clamp(x, 0, 1),
+                        clamp(y, 0, 1),
+                        a
+                    ]
+                });
                 return new Trace(Trace.expand(TraceSchema.parse(parsed) as TraceArray));
             }
             const res = z.object({
