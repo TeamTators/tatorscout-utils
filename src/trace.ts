@@ -167,8 +167,8 @@ const decompressPoint = (p: string) => {
     
     return [
         decompressNum(i),
-        decompressNum(x),
-        decompressNum(y),
+        decompressNum(x) / 1000,
+        decompressNum(y) / 1000,
         a === '0' ? 0 : a,
     ] as P;
 }
@@ -394,7 +394,7 @@ export class Trace {
                         clamp(x, 0, 1),
                         clamp(y, 0, 1),
                         a
-                    ]
+                    ];
                 });
                 return new Trace(Trace.expand(TraceSchema.parse(parsed) as TraceArray));
             }
@@ -427,6 +427,35 @@ export class Trace {
 
             throw new Error('Invalid trace state');
         });
+    }
+
+    /**
+     * Converts to new number scheme
+     * @param trace 
+     * @returns 
+     */
+    public static convert(trace: P[]): P[] {
+        let hasDecimal = false;
+        for (const p of trace) {
+            if (!Number.isInteger(p[1]) || !Number.isInteger(p[2])) {
+                hasDecimal = true;
+                break;
+            }
+        }
+        if (!hasDecimal) return trace.slice();
+        const c = (n: number) => {
+            n = Math.min(Math.max(n, 0), 1);
+            if (n === 1) return '999';
+            if (n === 0) return '000';
+            const [,str] = n.toString().split('.');
+            return str.slice(0, 3);
+        }
+        return trace.map(([i, x, y, a]) => [
+            i,
+            parseInt(c(x)),
+            parseInt(c(y)),
+            a
+        ]);
     }
 
     /**
@@ -586,12 +615,12 @@ export class Trace {
         if (compressed) {
             return JSON.stringify({
                 state: 'compressed',
-                trace: compress(this.points as TraceArray),
+                trace: compress(Trace.convert(this.points as TraceArray)),
             });
         } else {
             return JSON.stringify({
                 state: 'parsed',
-                trace: Trace.deExpand(this.points as TraceArray),
+                trace: Trace.deExpand(Trace.convert(this.points as TraceArray)),
             });
         }
     }
