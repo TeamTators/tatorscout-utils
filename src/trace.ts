@@ -274,48 +274,34 @@ export class Trace {
             }
             return truncated;
         }
-        // fill in missing points
+        
+        // Ensure we have a complete 640-point array
         const expanded: TraceArray = [];
-        for (let i = 0; i < trace.length - 1; i++) {
-            const point = trace[i];
-            const nextPoint = trace[i + 1];
-            expanded.push(point);
-
-            const filler: TraceArray = [];
-
-            try {
-                filler.push(
-                    ...(Array.from({
-                        length: nextPoint[0] - point[0] - 1
-                    }).map((_, i) => {
-                        return [point[0] + i + 1, point[1], point[2], 0];
-                    }) as TraceArray)
-                );
-            } catch {
-                // do nothing as the length is 0
+        
+        // Create a map of existing points by time index
+        const pointMap = new Map<number, P>();
+        for (const point of trace) {
+            pointMap.set(point[0], point);
+        }
+        
+        // Fill in all points from 0 to 639
+        for (let i = 0; i < 640; i++) {
+            if (pointMap.has(i)) {
+                // Use existing point
+                expanded.push(pointMap.get(i)!);
+            } else {
+                // Find the last known point before this time
+                let lastKnownPoint: P = [0, 0, 0, 0]; // Default starting position
+                for (let j = i - 1; j >= 0; j--) {
+                    if (pointMap.has(j)) {
+                        lastKnownPoint = pointMap.get(j)!;
+                        break;
+                    }
+                }
+                // Create filler point with same position as last known point
+                expanded.push([i, lastKnownPoint[1], lastKnownPoint[2], 0]);
             }
-
-            expanded.push(...filler);
         }
-
-        // fill in the remaining points to reach 640
-        const lastPoint = trace[trace.length - 1];
-        const remaining: TraceArray = [];
-
-        try {
-            remaining.push(
-                ...(Array.from({
-                    length: 639 - lastPoint[0]
-                }).map((_, i) => {
-                    return [lastPoint[0] + i + 1, lastPoint[1], lastPoint[2], 0];
-                }) as TraceArray)
-            );
-        } catch {
-            // do nothing as the length is 0
-        }
-
-        expanded.push(lastPoint);
-        expanded.push(...remaining);
 
         return expanded;
     }
