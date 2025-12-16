@@ -232,7 +232,7 @@ export const Match2025Schema = z.object({
 	event_key: z.string(),
 	key: z.string(),
 	match_number: z.number(),
-	post_result_time: z.number(),
+	post_result_time: z.number().optional(),
 	predicted_time: z.number(),
 	score_breakdown: z.object({
 		blue: z.object({
