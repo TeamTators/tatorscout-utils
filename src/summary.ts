@@ -973,30 +973,4 @@ export class PivotSummary<T, S extends SummarySchema<T>> {
 
         return sorted;
     }
-
-    teamSortedDown(): { [group: string]: { [item: string]: {
-        team: number;
-        value: number;
-    }[] } } {
-        const sorted: { [group: string]: { [item: string]: {
-            team: number;
-            value: number;
-        }[] } } = {};
-
-        for (const group in this.pivotedData) {
-            sorted[group] = {};
-            for (const item in this.pivotedData[group]) {
-                const teamValues = this.pivotedData[group][item];
-                const sortedTeams = Object.entries(teamValues)
-                    .sort((a, b) => Number(b[0]) - Number(a[0]))
-                    .map(([team]) => Number(team));
-                sorted[group][item] = sortedTeams.map(team => ({
-                    team,
-                    value: teamValues[String(team)],
-                }));
-            }
-        }
-
-        return sorted;
-    }
 }
