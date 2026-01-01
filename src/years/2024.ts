@@ -409,7 +409,7 @@ class YearInfo2024 extends YearInfo<
  * const climbAnalysis = year2024.climbTimes(trace);
  * ```
  */
-const yearInfo = new YearInfo2024(
+export default new YearInfo2024(
     globalZones2024,
     allianceZones2024,
     [
@@ -433,13 +433,6 @@ const yearInfo = new YearInfo2024(
     {}
 );
 
-/**
- * Export the YearInfo2024 class type for type checking and extension
- * @typedef {YearInfo2024} YearInfo2024
- */
-export default {
-    YearInfo2024: yearInfo,
-}
 
 /**
  * Predefined note positions on the 2024 CRESCENDO field

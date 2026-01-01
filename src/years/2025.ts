@@ -344,7 +344,7 @@ class YearInfo2025 extends YearInfo<
  * const alliance = year2025.getAlliance(trace);
  * ```
  */
-const info = new YearInfo2025(
+export default new YearInfo2025(
     globalZones2025,
     allianceZones2025,
     [
@@ -361,7 +361,3 @@ const info = new YearInfo2025(
     scoreBreakdown2025,
     {}
 );
-
-export default {
-    YearInfo2025: info,
-}
