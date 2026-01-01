@@ -962,7 +962,7 @@ export class PivotSummary<T, S extends SummarySchema<T>> {
             for (const item in this.pivotedData[group]) {
                 const teamValues = this.pivotedData[group][item];
                 const sortedTeams = Object.entries(teamValues)
-                    .sort((a, b) => b[1] - a[1])
+                    .sort((a, b) => Number(b[0]) - Number(a[0]))
                     .map(([team]) => Number(team));
                 sorted[group][item] = sortedTeams.map(team => ({
                     team,
