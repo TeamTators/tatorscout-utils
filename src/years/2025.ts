@@ -358,13 +358,10 @@ const info = new YearInfo2025(
         [0.025, 0.201]
     ],
     actions2025,
-    scoreBreakdown2025
+    scoreBreakdown2025,
+    {}
 );
 
-export default info;
-
-/**
- * Export the YearInfo2025 class type for type checking and extension
- * @typedef {YearInfo2025} YearInfo2025
- */
-export type { YearInfo2025 };
+export default {
+    YearInfo2025: info,
+}

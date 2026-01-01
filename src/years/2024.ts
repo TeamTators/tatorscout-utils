@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
+import { YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { attempt, Result } from "ts-utils/check";
@@ -409,7 +409,7 @@ class YearInfo2024 extends YearInfo<
  * const climbAnalysis = year2024.climbTimes(trace);
  * ```
  */
-export default new YearInfo2024(
+const yearInfo = new YearInfo2024(
     globalZones2024,
     allianceZones2024,
     [
@@ -429,14 +429,17 @@ export default new YearInfo2024(
         [0.080, 0.042]
     ],
     actions2024,
-    scoreBreakdown2024
+    scoreBreakdown2024,
+    {}
 );
 
 /**
  * Export the YearInfo2024 class type for type checking and extension
  * @typedef {YearInfo2024} YearInfo2024
  */
-export type { YearInfo2024 };
+export default {
+    YearInfo2024: yearInfo,
+}
 
 /**
  * Predefined note positions on the 2024 CRESCENDO field
