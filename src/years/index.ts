@@ -88,7 +88,7 @@ export class YearInfo<
     Actions extends string = string,
     Score extends ScoreBreakdown<Actions> = ScoreBreakdown<Actions>,
     ParsedScoreBreakdown = unknown,
-    ActionZones extends ZoneMap = ZoneMap,
+    ActionZones extends AllianceZoneMap = AllianceZoneMap,
 > {
     /**
      * Creates a new YearInfo instance
