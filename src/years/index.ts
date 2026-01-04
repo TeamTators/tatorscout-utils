@@ -87,7 +87,8 @@ export class YearInfo<
     AllianceAreas extends AllianceZoneMap = AllianceZoneMap, 
     Actions extends string = string,
     Score extends ScoreBreakdown<Actions> = ScoreBreakdown<Actions>,
-    ParsedScoreBreakdown = unknown
+    ParsedScoreBreakdown = unknown,
+    ActionZones extends AllianceZoneMap = AllianceZoneMap,
 > {
     /**
      * Creates a new YearInfo instance
@@ -103,6 +104,7 @@ export class YearInfo<
         public readonly border: Zone,
         public readonly actions: Record<Actions, string>,
         public readonly scoreBreakdown: Score,
+        public readonly actionZones: ActionZones,
     ) {
     }
 

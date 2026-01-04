@@ -143,6 +143,8 @@ const actions2025 = {
     shc: 'Shallow Climb',
 };
 
+const actionZones2025 = {};
+
 /**
  * Point values for each action in different game periods for 2025 REEFSCAPE
  * Defines scoring system used for calculating team performance
@@ -223,7 +225,8 @@ class YearInfo2025 extends YearInfo<
     typeof allianceZones2025,
     keyof typeof actions2025,
     typeof scoreBreakdown2025,
-    ParsedScoreBreakdown2025
+    ParsedScoreBreakdown2025,
+    typeof actionZones2025
 > {
     parseMatch(match: TBAMatch) {
         return attempt(() => {
@@ -344,7 +347,7 @@ class YearInfo2025 extends YearInfo<
  * const alliance = year2025.getAlliance(trace);
  * ```
  */
-const info = new YearInfo2025(
+export default new YearInfo2025(
     globalZones2025,
     allianceZones2025,
     [
@@ -358,13 +361,6 @@ const info = new YearInfo2025(
         [0.025, 0.201]
     ],
     actions2025,
-    scoreBreakdown2025
+    scoreBreakdown2025,
+    actionZones2025
 );
-
-export default info;
-
-/**
- * Export the YearInfo2025 class type for type checking and extension
- * @typedef {YearInfo2025} YearInfo2025
- */
-export type { YearInfo2025 };
