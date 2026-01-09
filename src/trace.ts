@@ -167,7 +167,7 @@ const decompressPoint = (p: string) => {
     
     const fn = (num: number): number => {
         if (num.toString().length < 3) {
-            return parseInt(num.toString().padEnd(3, '0')) / 1000;
+            return parseInt(num.toString().padStart(3, '0')) / 1000;
         } else {
             return num / 1000;
         }
