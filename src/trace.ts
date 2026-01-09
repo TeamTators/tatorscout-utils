@@ -457,7 +457,7 @@ export class Trace {
             if (n === 1) return '999';
             if (n === 0) return '000';
             const [,str] = n.toString().split('.');
-            return str.slice(0, 3);
+            return str.slice(0, 3).padEnd(3, '0');
         }
         return trace.map(([i, x, y, a]) => [
             i,
