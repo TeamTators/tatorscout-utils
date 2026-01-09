@@ -87,7 +87,7 @@ const compressNum = (num: number) => {
     if (!Number.isInteger(num)) throw new Error(`Expected integer, got ${num}`);
     if (num < 0) num = 0;
     if (num > 999) num = 999;
-    
+
     const base = chars.length;
     
     // Convert to base-52, ensuring exactly 2 characters
@@ -165,10 +165,19 @@ const decompressPoint = (p: string) => {
     const y = p.slice(4, 6);
     const a = p.slice(6); // Everything after the 6th character is the action
     
+    const fn = (num: number): number => {
+        if (num.toString().length < 3) {
+            return parseInt(num.toString().padEnd(3, '0')) / 1000;
+        } else {
+            return num / 1000;
+        }
+    };
+
+
     return [
         decompressNum(i),
-        decompressNum(x) / 1000,
-        decompressNum(y) / 1000,
+        fn(decompressNum(x)),
+        fn(decompressNum(y)),
         a === '0' ? 0 : a,
     ] as P;
 }
