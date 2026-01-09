@@ -79,6 +79,7 @@ export const TeamEventStatusSchema = z.object({
     qual: z.object({
         ranking: z.object({
             rank: z.number(),
+			sort_orders: z.array(z.number()),
             record: z.object({
                 losses: z.number(),
                 wins: z.number(),
