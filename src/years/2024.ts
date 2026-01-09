@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
+import { YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { attempt, Result } from "ts-utils/check";
@@ -176,6 +176,8 @@ const scoreBreakdown2024 = {
     },
 }
 
+const actionZones2024 = {};
+
 /**
  * Structured score breakdown for 2024 CRESCENDO game
  * Provides detailed scoring information for autonomous, teleop, and endgame periods
@@ -222,7 +224,8 @@ class YearInfo2024 extends YearInfo<
     typeof allianceZones2024,
     keyof typeof actions2024,
     typeof scoreBreakdown2024,
-    ParsedScoreBreakdown2024
+    ParsedScoreBreakdown2024,
+    typeof actionZones2024
 > {
     parseMatch(match: TBAMatch): Result<TBAMatch2024> {
         return attempt(() => {
@@ -429,14 +432,10 @@ export default new YearInfo2024(
         [0.080, 0.042]
     ],
     actions2024,
-    scoreBreakdown2024
+    scoreBreakdown2024,
+    actionZones2024
 );
 
-/**
- * Export the YearInfo2024 class type for type checking and extension
- * @typedef {YearInfo2024} YearInfo2024
- */
-export type { YearInfo2024 };
 
 /**
  * Predefined note positions on the 2024 CRESCENDO field
