@@ -205,7 +205,67 @@ export const matchSort = (a: TBAMatch, b: TBAMatch) => {
     return a.match_number - b.match_number;
 };
 
-export const Match2024Schema = z.object({});
+const Match2024Breakdown = z.object({
+		// "adjustPoints": z.number(),                                                                                                                                                                                                                                              
+		// "autoAmpNoteCount": 0,                                                                                                                                                                                                                                          
+		// "autoAmpNotePoints": 0,                                                                                                                                                                                                                                         
+		// "autoLeavePoints": 4,                                                                                                                                                                                                                                           
+		// "autoLineRobot1": z.union([z.literal("Yes"), z.literal("No")]),                                                                                                                                                                                                                                        
+		// "autoLineRobot2": "Yes",                                                                                                                                                                                                                                        
+		// "autoLineRobot3": "Yes",                                                                                                                                                                                                                                        
+		// "autoPoints": 14,                                                                                                                                                                                                                                               
+		// "autoSpeakerNoteCount": 2,                                                                                                                            
+		// "autoSpeakerNotePoints": 10,                                                                                                                          
+		// "autoTotalNotePoints": 10,                                                                                                                            
+		// "coopNotePlayed": false,                                                                                                                              
+        "coopertitionBonusAchieved": z.boolean(),                                                                                                                   
+        //   "coopertitionCriteriaMet": false,                                                                                                                     
+        //   "endGameHarmonyPoints": 0,                                                                                                                            
+        //   "endGameNoteInTrapPoints": 0,                                                                                                                         
+        //   "endGameOnStagePoints": 3,                                                                                                                            
+        //   "endGameParkPoints": 1,                                                                                                                               
+        //   "endGameRobot1": "StageLeft",                                                                                                                         
+        //   "endGameRobot2": "Parked",                                                                                                                            
+        //   "endGameRobot3": "None",                                                                                                                              
+        //   "endGameSpotLightBonusPoints": 0,                                                                                                                     
+        //   "endGameTotalStagePoints": 4,                                                                                                                         
+        "ensembleBonusAchieved": z.boolean(),                                                                                                                       
+        //   "ensembleBonusOnStageRobotsThreshold": 2,                                                                                                             
+        //   "ensembleBonusStagePointsThreshold": 10,                                                                                                              
+        //   "foulCount": 1,                                                                                                                                       
+        //   "foulPoints": 15,                                                                                                                                     
+        //   "g206Penalty": false,                                                                                                                                 
+        //   "g408Penalty": false,                                                                                                                                 
+        //   "g424Penalty": false,                                                                                                                                 
+    	"melodyBonusAchieved": z.boolean(),                                                                                                                         
+        //   "melodyBonusThreshold": 18,                                                                                                                           
+        //   "melodyBonusThresholdCoop": 15,                                                                                                                       
+        //   "melodyBonusThresholdNonCoop": 18,                                                                                                                    
+        //   "micCenterStage": false,                                                                                                                              
+        //   "micStageLeft": false,                                  
+        //   "micStageRight": false,                                 
+        //   "rp": 0,                                                
+        //   "techFoulCount": 0,                                     
+        //   "teleopAmpNoteCount": 4,                                
+        //   "teleopAmpNotePoints": 4,                               
+        //   "teleopPoints": 39,                                     
+        //   "teleopSpeakerNoteAmplifiedCount": 3,                                                                                      
+        //   "teleopSpeakerNoteAmplifiedPoints": 15,                                                                                    
+        //   "teleopSpeakerNoteCount": 8,                            
+        //   "teleopSpeakerNotePoints": 16,                                                                                             
+        //   "teleopTotalNotePoints": 35,                            
+        //   "totalPoints": 68,                                      
+        //   "trapCenterStage": false,                               
+        //   "trapStageLeft": false,                                 
+        //   "trapStageRight": false      
+});
+
+export const Match2024Schema = MatchSchema.extend({
+	score_breakdown: z.object({
+		blue: Match2024Breakdown,
+		red: Match2024Breakdown,
+	}),
+});
 
 export type TBAMatch2024 = z.infer<typeof Match2024Schema>;
 
