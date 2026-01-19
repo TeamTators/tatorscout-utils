@@ -13,7 +13,20 @@ import { Match2025Schema } from "../tba";
  * These are neutral areas accessible to both alliances
  */
 const globalZones2026 = {
-    neutral: [],
+    neutral: [
+        [0.306, 0.044],
+        [0.694, 0.044],
+        [0.694, 0.192],
+        [0.664, 0.192],
+        [0.664, 0.799],
+        [0.692, 0.799],
+        [0.692, 0.943],
+        [0.308, 0.943],
+        [0.308, 0.801],
+        [0.334, 0.801],
+        [0.334, 0.191],
+        [0.306, 0.191]
+    ],
 };
 
 /**
@@ -23,44 +36,100 @@ const globalZones2026 = {
 const allianceZones2026 = {
     zones: {
         blue: [
+            [0.051, 0.045],
+            [0.269, 0.045],
+            [0.269, 0.948],
+            [0.051, 0.948]
         ],
         red: [
+            [0.730, 0.047],
+            [0.947, 0.047],
+            [0.947, 0.948],
+            [0.730, 0.948]
         ]
     },
     bump: {
         blue: [
+            [0.270, 0.194],
+            [0.335, 0.194],
+            [0.335, 0.800],
+            [0.270, 0.800]
         ],
         red: [
+            [0.665, 0.194],
+            [0.728, 0.194],
+            [0.728, 0.800],
+            [0.665, 0.800]
         ]
     },
     trenchLeft: {
         red: [
+            [0.664, 0.797],
+            [0.729, 0.797],
+            [0.729, 0.943],
+            [0.664, 0.943]
         ],
         blue: [
+            [0.270, 0.045],
+            [0.336, 0.045],
+            [0.336, 0.190],
+            [0.270, 0.190]
         ]
     },
     trenchRight: {
         red: [
+            [0.664, 0.045],
+            [0.730, 0.045],
+            [0.730, 0.190],
+            [0.664, 0.190]
         ],
         blue: [
+            [0.270, 0.797],
+            [0.336, 0.797],
+            [0.336, 0.943],
+            [0.270, 0.943]
         ]
     },
     climb: {
         blue: [
+            [0.052, 0.417],
+            [0.135, 0.417],
+            [0.135, 0.630],
+            [0.052, 0.630]
         ],
         red: [
+            [0.851, 0.345],
+            [0.945, 0.345],
+            [0.945, 0.585],
+            [0.851, 0.585]
         ]
     },
     superCycle: {
         blue: [
+            [0.049, 0.797],
+            [0.126, 0.797],
+            [0.126, 0.942],
+            [0.049, 0.942]
         ],
         red: [
+            [0.865, 0.047],
+            [0.947, 0.047],
+            [0.947, 0.189],
+            [0.865, 0.189]
         ]
     },
     depot: {
         blue: [
+            [0.051, 0.174],
+            [0.117, 0.174],
+            [0.117, 0.383],
+            [0.051, 0.383]
         ],
         red: [
+            [0.895, 0.626],
+            [0.946, 0.626],
+            [0.946, 0.793],
+            [0.895, 0.793]
         ]
     }
 };
@@ -111,12 +180,21 @@ const scoreBreakdown2026 = {
  */
 type ParsedScoreBreakdown2026 = Readonly<{
     auto: {
+        hub1: number;
+        hub5: number;
+        hub10: number;
         total: number;
     };
     teleop: {
+        hub1: number;
+        hub5: number;
+        hub10: number;
         total: number;
     };
     endgame: {
+        hub1: number;
+        hub5: number;
+        hub10: number;
         total: number;
     };
     total: number;
@@ -146,7 +224,7 @@ class YearInfo2026 extends YearInfo<
 > {
     parseMatch(match: TBAMatch) {
         return attempt(() => {
-            return Match2025Schema.parse(match);
+            return Match2026Schema.parse(match);
         });
     }
 
@@ -189,21 +267,39 @@ class YearInfo2026 extends YearInfo<
 
         const score = {
             auto: {
-                total: 0,
+                hub1: 0,
+                hub5: 0,
+                hub10: 0,
+                total: 0
             },
             teleop: {
-                total: 0,
+                hub1: 0,
+                hub5: 0,
+                hub10: 0,
+                total: 0
             },
             endgame: {
-                total: 0,
+                hub1: 0,
+                hub5: 0,
+                hub10: 0,
+                total: 0
             },
             total: 0
         };
 
         for (const p of trace.points) {
             if (p[0] <= 20 * 4) {
-                // auto
+                if (p[3] === 'hub1') score.auto.hub1 += auto.hub1;
+                if (p[3] === 'hub5') score.auto.hub5 += auto.hub5;
+                if (p[3] === 'hub10') score.auto.hub10 += auto.hub10;
+            } else if (p[0] <= 140 * 4) {
+                if (p[3] === 'hub1') score.teleop.hub1 += teleop.hub1;
+                if (p[3] === 'hub5') score.teleop.hub5 += teleop.hub5;
+                if (p[3] === 'hub10') score.teleop.hub10 += teleop.hub10;
             } else {
+                if (p[3] === 'hub1') score.endgame.hub1 += endgame.hub1;
+                if (p[3] === 'hub5') score.endgame.hub5 += endgame.hub5;
+                if (p[3] === 'hub10') score.endgame.hub10 += endgame.hub10;
             }
         }
 
