@@ -1,12 +1,10 @@
 import { Point2D } from "math/point";
-import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
+import { YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
-import { Aggregators, createTypedSummary, SummarySchema } from "../summary";
-import { $Math } from "ts-utils/math";
 import { TBAMatch } from "../tba";
 import { attempt } from "ts-utils/check";
-import { Match2025Schema } from "../tba";
+import { Match2026Schema, type TBAMatch2026 } from "../tba";
 
 /**
  * Global field zones for 2026 REBUILT game
@@ -222,7 +220,7 @@ class YearInfo2026 extends YearInfo<
     ParsedScoreBreakdown2026,
     typeof actionZones2026
 > {
-    parseMatch(match: TBAMatch) {
+    parseMatch(match: TBAMatch2026) {
         return attempt(() => {
             return Match2026Schema.parse(match);
         });
@@ -246,7 +244,7 @@ class YearInfo2026 extends YearInfo<
     }
 
     /**
-     * Parses a robot trace into detailed score breakdown for 2025 REEFSCAPE
+     * Parses a robot trace into detailed score breakdown for 2026 REBUILT
      * Calculates points for coral placement, algae processing, and other scoring actions
      * 
      * @param {Trace} trace - Robot movement and action trace data

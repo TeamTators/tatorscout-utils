@@ -505,3 +505,8 @@ export const Match2025Schema = z.object({
  * @typedef {TBAMatch2025}
  */
 export type TBAMatch2025 = z.infer<typeof Match2025Schema>;
+
+
+export const Match2026Schema = z.object({});
+
+export type TBAMatch2026 = z.infer<typeof Match2026Schema>;
