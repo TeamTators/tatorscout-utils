@@ -539,20 +539,36 @@ export class Trace {
      * });
      * ```
      */
-    velocityHistogram(bins: number): number[] {
+    velocityHistogram(bins: number): {
+        bins: number[];
+        labels: number[];
+    } {
         const m = this.velocityMap();
-        const sorted = m.sort((a, b) => a - b);
+        if (m.length === 0) {
+            return {
+                bins: [],
+                labels: [],
+            };
+        }
+        const sorted = m.slice().sort((a, b) => a - b);
         const max = sorted[sorted.length - 1];
 
         const buckets: number[] = new Array(bins).fill(0);
-        const bucketSize = max / bins;
+        const bucketSize = max === 0 ? 1 : max / bins;
+
+        const labels: number[] = Array.from({ length: bins }, (_, i) => {
+            return (i + 0.5) * bucketSize;
+        });
 
         for (const v of m) {
-            const bucket = Math.floor(v / bucketSize);
-            buckets[bucket]++;
+            const bucket = Math.min(bins - 1, Math.floor(v / bucketSize));
+            buckets[bucket] += 1;
         }
 
-        return buckets;
+        return {
+            bins: buckets,
+            labels,
+        };
     }
 
     /**
