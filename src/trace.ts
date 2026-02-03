@@ -567,7 +567,8 @@ export class Trace {
         bins: number[];
         labels: number[];
     } {
-        const m = this.speedMap(config);
+        const m = this.speedMap(config)
+            .filter(v => v >= 1);
         if (m.length === 0) {
             return {
                 bins: [],
