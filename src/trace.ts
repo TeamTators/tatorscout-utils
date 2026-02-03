@@ -582,7 +582,7 @@ export class Trace {
         const bucketSize = max === 0 ? 1 : max / numBins;
 
         const binLabels: number[] = Array.from({ length: numBins }, (_, i) => {
-            return i * bucketSize;
+            return (i + 0.5) * bucketSize;
         });
 
         for (const v of m) {
