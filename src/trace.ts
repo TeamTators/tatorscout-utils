@@ -493,6 +493,10 @@ export class Trace {
      * Calculates velocity between consecutive trace points
      * Returns array of velocities in feet per second
      * 
+     * @param {object} [config] - Configuration options
+     * @param {number} [config.maxVel=20] - Maximum velocity to consider for histogram (fps)
+     * @param {boolean} [config.rolloff=true] - Whether to apply rolloff to high velocities
+     * @param {number} [config.rolloffVel=25] - Velocity at which rolloff begins (fps) if rolloff is true, everything over this point is ignored, everything between maxVel and rolloffVel is capped at maxVel
      * @returns {number[]} Array of velocity values (fps)
      * 
      * @example
@@ -502,29 +506,51 @@ export class Trace {
      * console.log(`Peak velocity: ${maxVelocity.toFixed(1)} fps`);
      * ```
      */
-    velocityMap(): number[] {
+    velocityMap(config: {
+        maxVel?: number;
+        rolloff?: boolean;
+        rolloffVel?: number;
+    } = {
+        maxVel: 20,
+        rolloff: true,
+        rolloffVel: 25,
+    }): number[] {
         return this.points
             .map((p1, i, a) => {
-                if (i === a.length - 1) return null;
+                if (i === a.length - 1) return null; // cannot compute velocity for last point
 
-                const [, x1, y1] = p1;
-                const [, x2, y2] = a[i + 1];
+                const [, x1, y1] = p1; // 0 - 1
+                const [, x2, y2] = a[i + 1]; // 0 - 1
 
-                const dx = (x2 - x1) * 54;
-                const dy = (y2 - y1) * 27;
+                const dx = (x2 - x1) * 54; // ft
+                const dy = (y2 - y1) * 27; // ft
 
+                // feet / tick (0.25s)
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                return distance * 4;
+                let vel = distance * 4; // feet per second
+                
+                if (config.rolloff) {
+                    if (vel > (config.rolloffVel ?? 25)) {
+                        return null; // ignore extreme velocities
+                    } else if (vel > (config.maxVel ?? 20)) {
+                        vel = config.maxVel ?? 20; // cap at maxVel
+                    }
+                }
+                return vel;
             })
-            .filter(p => p !== null) as number[];
+            .filter(vel => vel !== null) as number[];
     }
 
     /**
      * Generates a histogram of velocity distribution
      * Useful for analyzing robot movement patterns and performance characteristics
      * 
-     * @param {number} bins - Number of histogram bins to create
+     * @param {number} numBins - Number of histogram bins to create
+     * @param {object} [config] - Configuration options
+     * @param {number} [config.maxVel=20] - Maximum velocity to consider for histogram (fps)
+     * @param {boolean} [config.rolloff=true] - Whether to apply rolloff to high velocities
+     * @param {number} [config.rolloffVel=25] - Velocity at which rolloff begins (fps) if rolloff is true, everything over this point is ignored, everything between maxVel and rolloffVel is capped at maxVel
      * @returns {number[]} Array of counts for each velocity bin
      * 
      * @example
@@ -539,11 +565,19 @@ export class Trace {
      * });
      * ```
      */
-    velocityHistogram(bins: number): {
+    velocityHistogram(numBins: number, config: {
+        maxVel?: number;
+        rolloff?: boolean;
+        rolloffVel?: number;
+    } = {
+        maxVel: 20,
+        rolloff: true,
+        rolloffVel: 25,
+    }): {
         bins: number[];
         labels: number[];
     } {
-        const m = this.velocityMap();
+        const m = this.velocityMap(config);
         if (m.length === 0) {
             return {
                 bins: [],
@@ -551,23 +585,23 @@ export class Trace {
             };
         }
         const sorted = m.slice().sort((a, b) => a - b);
-        const max = sorted[sorted.length - 1];
+        const max = Math.min(sorted[sorted.length - 1]);
 
-        const buckets: number[] = new Array(bins).fill(0);
-        const bucketSize = max === 0 ? 1 : max / bins;
+        const bins: number[] = new Array(numBins).fill(0);
+        const bucketSize = max === 0 ? 1 : max / numBins;
 
-        const labels: number[] = Array.from({ length: bins }, (_, i) => {
+        const binLabels: number[] = Array.from({ length: numBins }, (_, i) => {
             return (i + 0.5) * bucketSize;
         });
 
         for (const v of m) {
-            const bucket = Math.min(bins - 1, Math.floor(v / bucketSize));
-            buckets[bucket] += 1;
+            const bucket = Math.min(numBins - 1, Math.floor(v / bucketSize));
+            bins[bucket] += 1;
         }
 
         return {
-            bins: buckets,
-            labels,
+            bins: bins,
+            labels: binLabels,
         };
     }
 
