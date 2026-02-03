@@ -4,6 +4,18 @@ import Year2025 from "./years/2025";
 import { attempt } from "ts-utils/check";
 
 /**
+ * Configuration options for velocity calculations
+ */
+export type VelocityConfig = {
+    /* Maximum velocity to consider for histogram (fps) */
+    maxVel: number;
+    /* Whether to apply rolloff to high velocities */
+    rolloff: boolean;
+    /* Velocity at which rolloff begins (fps) if rolloff is true, everything over this point is ignored, everything between maxVel and rolloffVel is capped at maxVel */
+    rolloffVel: number;
+}
+
+/**
  * Custom error class for trace-related operations
  * Thrown when trace parsing, validation, or processing fails
  * 
@@ -493,10 +505,7 @@ export class Trace {
      * Calculates velocity between consecutive trace points
      * Returns array of velocities in feet per second
      * 
-     * @param {object} [config] - Configuration options
-     * @param {number} [config.maxVel=20] - Maximum velocity to consider for histogram (fps)
-     * @param {boolean} [config.rolloff=true] - Whether to apply rolloff to high velocities
-     * @param {number} [config.rolloffVel=25] - Velocity at which rolloff begins (fps) if rolloff is true, everything over this point is ignored, everything between maxVel and rolloffVel is capped at maxVel
+     * @param {VelocityConfig} [config] - Configuration options
      * @returns {number[]} Array of velocity values (fps)
      * 
      * @example
@@ -506,15 +515,7 @@ export class Trace {
      * console.log(`Peak velocity: ${maxVelocity.toFixed(1)} fps`);
      * ```
      */
-    velocityMap(config: {
-        maxVel?: number;
-        rolloff?: boolean;
-        rolloffVel?: number;
-    } = {
-        maxVel: 20,
-        rolloff: true,
-        rolloffVel: 25,
-    }): number[] {
+    speedMap(config: VelocityConfig): number[] {
         return this.points
             .map((p1, i, a) => {
                 if (i === a.length - 1) return null; // cannot compute velocity for last point
@@ -531,13 +532,13 @@ export class Trace {
                 let vel = distance * 4; // feet per second
                 
                 if (config.rolloff) {
-                    if (vel > (config.rolloffVel ?? 25)) {
+                    if (vel > config.rolloffVel) {
                         return null; // ignore extreme velocities
-                    } else if (vel > (config.maxVel ?? 20)) {
-                        vel = config.maxVel ?? 20; // cap at maxVel
+                    } else if (vel > config.maxVel) {
+                        vel = config.maxVel; // cap at maxVel
                     }
                 }
-                return vel;
+                return Math.min(vel, config.maxVel);
             })
             .filter(vel => vel !== null) as number[];
     }
@@ -547,10 +548,7 @@ export class Trace {
      * Useful for analyzing robot movement patterns and performance characteristics
      * 
      * @param {number} numBins - Number of histogram bins to create
-     * @param {object} [config] - Configuration options
-     * @param {number} [config.maxVel=20] - Maximum velocity to consider for histogram (fps)
-     * @param {boolean} [config.rolloff=true] - Whether to apply rolloff to high velocities
-     * @param {number} [config.rolloffVel=25] - Velocity at which rolloff begins (fps) if rolloff is true, everything over this point is ignored, everything between maxVel and rolloffVel is capped at maxVel
+     * @param {VelocityConfig} [config] - Configuration options
      * @returns {number[]} Array of counts for each velocity bin
      * 
      * @example
@@ -565,25 +563,18 @@ export class Trace {
      * });
      * ```
      */
-    velocityHistogram(numBins: number, config: {
-        maxVel?: number;
-        rolloff?: boolean;
-        rolloffVel?: number;
-    } = {
-        maxVel: 20,
-        rolloff: true,
-        rolloffVel: 25,
-    }): {
+    velocityHistogram(config: VelocityConfig): {
         bins: number[];
         labels: number[];
     } {
-        const m = this.velocityMap(config);
+        const m = this.speedMap(config);
         if (m.length === 0) {
             return {
                 bins: [],
                 labels: [],
             };
         }
+        const numBins = config.maxVel;
         const sorted = m.slice().sort((a, b) => a - b);
         const max = Math.min(sorted[sorted.length - 1]);
 
@@ -609,6 +600,7 @@ export class Trace {
      * Calculates average velocity across entire trace
      * Provides overall measure of robot movement speed
      * 
+     * @param {VelocityConfig} [config] - Configuration options
      * @returns {number} Average velocity in feet per second
      * 
      * @example
@@ -622,8 +614,8 @@ export class Trace {
      * }
      * ```
      */
-    averageVelocity(): number {
-        const m = this.velocityMap();
+    averageVelocity(config: VelocityConfig): number {
+        const m = this.speedMap(config);
         const sum = m.reduce((a, b) => a + b, 0);
         return sum / m.length;
     }
@@ -687,15 +679,16 @@ export class Trace {
     /**
      * Calculates total time robot was effectively stationary
      * Counts intervals where velocity is below specified threshold
+     * @param {VelocityConfig} config - Configuration options
      * @param threshold - Velocity threshold to consider as "not moving" (fps)
      * @returns {number} Total time stationary in seconds
      */
-    secondsNotMoving(threshold = 0.1): number {
-        const velocities = this.velocityMap();
+    secondsNotMoving(config: VelocityConfig & { threshold: number }): number {
+        const velocities = this.speedMap(config);
         let notMovingCount = 0;
-
+        
         for (const v of velocities) {
-            if (v < threshold) {
+            if (v < config.threshold) {
                 notMovingCount++;
             }
         }
