@@ -568,7 +568,7 @@ export class Trace {
         labels: number[];
     } {
         const m = this.speedMap(config)
-            .filter(v => v > 1);
+            .filter(v => v > 0);
         if (m.length === 0) {
             return {
                 bins: [],
