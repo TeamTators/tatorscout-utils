@@ -579,14 +579,13 @@ export class Trace {
         const max = Math.min(sorted[sorted.length - 1]);
 
         const bins: number[] = new Array(numBins).fill(0);
-        const bucketSize = max === 0 ? 1 : max / numBins;
 
         const binLabels: number[] = Array.from({ length: numBins }, (_, i) => {
-            return (i + 0.5) * bucketSize;
+            return i + 1
         });
 
         for (const v of m) {
-            const bucket = Math.min(numBins - 1, Math.floor(v / bucketSize));
+            const bucket = Math.min(numBins - 1, v);
             bins[bucket] += 1;
         }
 
