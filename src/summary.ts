@@ -214,7 +214,7 @@ export class Summary<T, S extends SummarySchema<T>> {
             summary[team] = this.computeSingle(Number(team), data[team], teamMatches);
         }
 
-        return new ComputedSummary({ schema: summary, extras: this.extras });
+        return new ComputedSummary({ schema: summary, extras: this.extras }, this);
     }
 
     /**
@@ -307,7 +307,7 @@ export class Summary<T, S extends SummarySchema<T>> {
 
             this.extras = parsed.extras;
 
-            return new ComputedSummary<T, S>(parsed);
+            return new ComputedSummary<T, S>(parsed, this);
         });
     }
 }
@@ -385,7 +385,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * Creates a new ComputedSummary with team performance data
      * @param {CombinedSummaryType<T, S>} data - Complete computed metrics including schema and extras
      */
-    constructor(data: CombinedSummaryType<T, S>) {
+    constructor(data: CombinedSummaryType<T, S>, public readonly parser: Summary<T, S>) {
         this.schemaData = data.schema;
         this.extraData = data.extras;
     }
