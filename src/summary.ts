@@ -139,7 +139,6 @@ type Extra = {
  * ```
  */
 export class Summary<T, S extends SummarySchema<T>> {
-    private readonly schema: S;
 
     /**
      * Creates a new Summary instance with data extraction function and analysis schema
@@ -149,9 +148,8 @@ export class Summary<T, S extends SummarySchema<T>> {
      */
     constructor(
         public readonly fn: (data: Trace) => T,
-        schema: S
+        public readonly schema: S
     ) {
-        this.schema = schema;
     }
 
     /**
