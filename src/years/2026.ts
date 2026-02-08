@@ -198,6 +198,8 @@ type ParsedScoreBreakdown2026 = Readonly<{
     total: number;
 }>;
 
+const CYCLE_THRESHOLD_MS = 5000;
+
 /**
  * Year-specific implementation for 2026 REBUILT game
  * Handles field layout, scoring calculations, and alliance detection
@@ -317,6 +319,49 @@ class YearInfo2026 extends YearInfo<
             score.auto.total + score.teleop.total + score.endgame.total;
 
         return score;
+    }
+
+    /**
+     * Analyzes robot trace to extract cycle and depletion times
+     * @param {Trace} trace - Robot movement and action trace data
+     * @returns 
+     */
+    cycleInfo(trace: Trace) {
+        return attempt(() => {
+            const cycleTimes: number[] = [];
+            const depletionTimes: number[] = [];
+            let lastEndTime: number | null = null;
+            let lastStartTime: number | null = null;
+
+            for (const point of trace.points) {
+                const [i,,,a] = point;
+                const ms = i * 250;
+                if (['hub1', 'hub5', 'hub10'].includes(a as string)) {
+                    if (lastEndTime !== null) {
+                        // already in cycle
+                        lastEndTime = ms;
+                    } else {
+                        if (lastStartTime !== null) {
+                            // there was a previous cycle
+                            const cycleTime = ms - lastStartTime;
+                            cycleTimes.push(cycleTime);
+                        }
+                        lastEndTime = ms;
+                        lastStartTime = ms;
+                    }
+                } else {
+                    if (lastEndTime !== null) {
+                        const sinceEnd = ms - lastEndTime;
+                        if (sinceEnd >= CYCLE_THRESHOLD_MS) {
+                            // end of cycle
+                            depletionTimes.push(lastEndTime - Number(lastStartTime));
+                            lastEndTime = null;
+                        }
+                    }
+                }
+            }
+            return { cycleTimes, depletionTimes };
+        });
     }
 }
 
