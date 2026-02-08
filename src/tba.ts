@@ -107,10 +107,14 @@ export const MatchSchema = z.object({
     red: z.object({
       score: z.number().nullable(),
       team_keys: z.array(z.string()),
+	  dq_team_keys: z.array(z.string()).optional(),
+	  surrogate_team_keys: z.array(z.string()).optional(),
     }),
     blue: z.object({
       score: z.number().nullable(),
       team_keys: z.array(z.string()),
+	  dq_team_keys: z.array(z.string()).optional(),
+	  surrogate_team_keys: z.array(z.string()).optional(),
     }),
   }),
   event_key: z.string(),
