@@ -220,7 +220,7 @@ class YearInfo2026 extends YearInfo<
     ParsedScoreBreakdown2026,
     typeof actionZones2026
 > {
-    parseMatch(match: TBAMatch2026) {
+    parseMatch(match: TBAMatch) {
         return attempt(() => {
             return Match2026Schema.parse(match);
         });
