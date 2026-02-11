@@ -42,12 +42,18 @@ export type AllianceZoneMap = Readonly<{
 export type ScoreBreakdown<Actions extends string> = Readonly<{
     auto: {
         [key in Actions]?: number;
+    } & {
+        total: number;
     };
     teleop: {
         [key in Actions]?: number;
+    } & {
+        total: number;
     };
     endgame: {
         [key in Actions]?: number;
+    } & {
+        total: number;
     };
 }>;
 
