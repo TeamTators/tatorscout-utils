@@ -42,6 +42,22 @@ export type AllianceZoneMap = Readonly<{
 export type ScoreBreakdown<Actions extends string> = Readonly<{
     auto: {
         [key in Actions]?: number;
+    };
+    teleop: {
+        [key in Actions]?: number;
+    };
+    endgame: {
+        [key in Actions]?: number;
+    };
+}>;
+
+/**
+ * Return type of YearInfo.parse() for the breakdown of what their score contribution was.
+ * @template Actions - String union of valid action types for the year
+ */
+export type ParsedBreakdown<Actions extends string> = {
+    auto: {
+        [key in Actions]?: number;
     } & {
         total: number;
     };
@@ -55,7 +71,8 @@ export type ScoreBreakdown<Actions extends string> = Readonly<{
     } & {
         total: number;
     };
-}>;
+    total: number;
+};
 
 /**
  * Template literal type for time-specific actions (e.g., "auto.spk", "teleop.amp")
@@ -93,7 +110,7 @@ export class YearInfo<
     AllianceAreas extends AllianceZoneMap = AllianceZoneMap, 
     Actions extends string = string,
     Score extends ScoreBreakdown<Actions> = ScoreBreakdown<Actions>,
-    ParsedScoreBreakdown = unknown,
+    ParsedScoreBreakdown extends ParsedBreakdown<Actions> = ParsedBreakdown<Actions>,
     ActionZones extends AllianceZoneMap = AllianceZoneMap,
 > {
     /**

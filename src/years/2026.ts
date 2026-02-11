@@ -156,7 +156,7 @@ const scoreBreakdown2026 = {
     auto: {
         hub1: 1,
         hub5: 5,
-        hub10: 10
+        hub10: 10,
     },
     teleop: {
         hub1: 1,
