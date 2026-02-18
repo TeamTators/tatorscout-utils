@@ -2,8 +2,7 @@ import { Point2D } from "math/point";
 import { YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
-import { TBAMatch } from "../tba";
-import { attempt } from "ts-utils/check";
+import { attempt, type Result } from "ts-utils/check";
 import { Match2026Schema, type TBAMatch2026 } from "../tba";
 
 /**
@@ -222,7 +221,7 @@ class YearInfo2026 extends YearInfo<
     ParsedScoreBreakdown2026,
     typeof actionZones2026
 > {
-    parseMatch(match: TBAMatch2026) {
+    parseMatch(match: TBAMatch2026): Result<TBAMatch2026> {
         return attempt(() => {
             return Match2026Schema.parse(match);
         });
@@ -326,7 +325,10 @@ class YearInfo2026 extends YearInfo<
      * @param {Trace} trace - Robot movement and action trace data
      * @returns 
      */
-    cycleInfo(trace: Trace) {
+    cycleInfo(trace: Trace, cycleTrhesholdMs = CYCLE_THRESHOLD_MS): Result<{
+        cycleTimes: number[];
+        depletionTimes: number[];
+    }> {
         return attempt(() => {
             const cycleTimes: number[] = [];
             const depletionTimes: number[] = [];
