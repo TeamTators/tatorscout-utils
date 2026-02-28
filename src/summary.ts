@@ -416,11 +416,28 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * @returns JSON string suitable for `deserialize()`.
      */
     serialize(): string {
-        const serialized = JSON.stringify({
-            schema: this.schemaData,
+        const data: {
+            [team: string]: {
+                [group: string]: {
+                    [item: string]: number[];
+                }
+            }
+        } = {}
+
+        for (const team in this.schemaData) {
+            data[team] = {};
+            for (const group in this.schemaData[team]) {
+                data[team][group] = {};
+                for (const item in this.schemaData[team][group]) {
+                    data[team][group][item] = this.schemaData[team][group][item].values;
+                }
+            }
+        }
+
+        return JSON.stringify({
+            schema: data,
             // extras: this.extraData,
         });
-        return serialized;
     }
 
     /**
