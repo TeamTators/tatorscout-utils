@@ -464,7 +464,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
      * @example
      * const top = computed.sortedBy("auto", "total", false).slice(0, 10);
      */
-    sortedBy<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, ascending: boolean = true): TeamPoint<T, S>[] {
+    sortedBy<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, type: PointType, ascending: boolean = true): TeamPoint<T, S>[] {
         const points: TeamPoint<T, S>[] = [];
 
         for (const team in this.schemaData) {
@@ -472,7 +472,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
             if (teamGroup) {
                 const point = teamGroup[item];
                 if (point) {
-                    points.push(new TeamPoint(parseInt(team), point.average(), group, item as any));
+                    points.push(new TeamPoint(parseInt(team), point[type](), group, item as any));
                 }
             }
         }
@@ -480,13 +480,13 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         return points.sort((a, b) => ascending ? a.value - b.value : b.value - a.value);
     }
 
-    allSorted(ascending: boolean = true): { [G in GroupNames<T, S>]: { [I in ItemNames<T, S, G>]: TeamPoint<T, S>[] } } {
+    allSorted(type: PointType, ascending: boolean = true): { [G in GroupNames<T, S>]: { [I in ItemNames<T, S, G>]: TeamPoint<T, S>[] } } {
         const result: { [G in GroupNames<T, S>]: { [I in ItemNames<T, S, G>]: TeamPoint<T, S>[] } } = {} as any;
 
         for (const group in this.parent.schema) {
             (result as any)[group] = {} as { [I in ItemNames<T, S, typeof group>]: TeamPoint<T, S>[] };
             for (const item in this.parent.schema[group]) {
-                (result as any)[group][item] = this.sortedBy(group as any, item as any, ascending);
+                (result as any)[group][item] = this.sortedBy(group as any, item as any, type, ascending);
             }
         }
         return result;
