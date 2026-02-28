@@ -2,14 +2,8 @@ import { Point2D } from "math/point";
 import { YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
-<<<<<<< HEAD
-import { TBAMatch } from "../tba";
-import { attempt } from "ts-utils/check";
-import { Match2026Schema } from "../tba";
-=======
 import { attempt, type Result } from "ts-utils/check";
 import { Match2026Schema, type TBAMatch2026 } from "../tba";
->>>>>>> 10f88f0cf38286def184a1d0d6188802a84c61b8
 
 /**
  * Global field zones for 2026 REBUILT game
