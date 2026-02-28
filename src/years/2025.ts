@@ -2,8 +2,6 @@ import { Point2D } from "math/point";
 import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
-import { Aggregators, createTypedSummary, SummarySchema } from "../summary";
-import { $Math } from "ts-utils/math";
 import { TBAMatch } from "../tba";
 import { attempt } from "ts-utils/check";
 import { Match2025Schema } from "../tba";

@@ -4,7 +4,7 @@ import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { TBAMatch } from "../tba";
 import { attempt } from "ts-utils/check";
-import { Match2026Schema, type TBAMatch2026 } from "../tba";
+import { Match2026Schema } from "../tba";
 
 /**
  * Global field zones for 2026 REBUILT game
