@@ -445,6 +445,14 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         return ranking;
     }
 
+    allTeamsRanked(type: PointType): { [team: string]: TeamComputedSummaryNumber<T, S> } {
+        const allRanked: { [team: string]: TeamComputedSummaryNumber<T, S> } = {};
+        for (const team in this.schemaData) {
+            allRanked[team] = this.teamRanking(parseInt(team), type);
+        }
+        return allRanked;
+    }
+
     /**
      * Returns points sorted by their numeric value.
      *
