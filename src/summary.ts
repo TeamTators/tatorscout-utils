@@ -479,4 +479,16 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
 
         return points.sort((a, b) => ascending ? a.value - b.value : b.value - a.value);
     }
+
+    allSorted(ascending: boolean = true): { [G in GroupNames<T, S>]: { [I in ItemNames<T, S, G>]: TeamPoint<T, S>[] } } {
+        const result: { [G in GroupNames<T, S>]: { [I in ItemNames<T, S, G>]: TeamPoint<T, S>[] } } = {} as any;
+
+        for (const group in this.parent.schema) {
+            (result as any)[group] = {} as { [I in ItemNames<T, S, typeof group>]: TeamPoint<T, S>[] };
+            for (const item in this.parent.schema[group]) {
+                (result as any)[group][item] = this.sortedBy(group as any, item as any, ascending);
+            }
+        }
+        return result;
+    }
 }
