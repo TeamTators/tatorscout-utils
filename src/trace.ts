@@ -1,6 +1,7 @@
 import { z } from "zod";
 import Year2024 from "./years/2024";
 import Year2025 from "./years/2025";
+import Year2026 from './years/2026';
 import { attempt } from "ts-utils/check";
 
 /**
@@ -70,7 +71,7 @@ export const TraceSchema = z.array(z.tuple([
  * Includes actions from both 2024 CRESCENDO and 2025 REEFSCAPE
  * @typedef {Action}
  */
-export type Action = keyof typeof Year2024.actions | keyof typeof Year2025.actions;
+export type Action = keyof typeof Year2024.actions | keyof typeof Year2025.actions | keyof typeof Year2026.actions;
 
 /**
  * Character set used for base-52 number compression
