@@ -715,4 +715,56 @@ export class Trace {
                 return [];
         }
     }
+
+    /**
+     * Calculates total time robot was stationary without performing any actions
+     * Considers both velocity and action state to determine true inactivity
+     * @param {Trace} trace - Trace data to analyze
+     * @param config Configuration options including time threshold, speed threshold, and relevant actions
+     * @returns {number} Total time stationary without actions in seconds
+     */
+    secondsNotMovingWithInaction(trace: Trace, config: {
+        timeThresholdMs: number;
+        speedThreshold: number;
+        actions: string[];
+    }): number {
+        let lastActionTime: number | null = null;
+        let lastMoveTime: number | null = null;
+        let totalIdleTime = 0;
+
+        const velMap = trace.speedMap({
+            maxVel: 20,
+            rolloff: true,
+            rolloffVel: 25,
+        });
+
+        // start at 2nd point since the velMap is based on changes between points
+        for (let i = 1; i < trace.points.length; i++) {
+            const [time, , , action] = trace.points[i];
+            const vel = velMap[i] || Infinity; // if no velocity data, assume very high to avoid false idle time
+
+            if (vel <= config.speedThreshold) {
+                if (config.actions.includes(String(action))) {
+                    // they are doing something
+                    lastActionTime = time;
+                    lastMoveTime = null; // reset move time since they are active
+                } else {
+                    // they are not doing anything, check if they are idle                    
+                    if (lastActionTime !== null && time - lastActionTime >= config.timeThresholdMs) {
+                        // they have been idle for long enough after an action
+                        if (lastMoveTime === null) {
+                            lastMoveTime = time; // start idle timer
+                        } else {
+                            totalIdleTime += time - lastMoveTime; // accumulate idle time
+                            lastMoveTime = time; // reset move timer to current time
+                        }
+                    } else {
+                        lastMoveTime = null; // reset move time if they haven't been idle long enough
+                    }
+                }
+            }
+        }
+
+        return totalIdleTime / 1000; // convert to seconds
+    }
 }
