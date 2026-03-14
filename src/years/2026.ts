@@ -445,28 +445,42 @@ class YearInfo2026 extends YearInfo<
         });
     }
 
-    secondsNotMovineWhileNotShooting(trace: Trace, thresholdMs: number): number {
+    secondsNotMovineWhileNotShooting(trace: Trace, config: {
+        timeThresholdMs: number;
+        speedThreshold: number;
+    }): number {
         let lastActionTime: number | null = null;
         let lastMoveTime: number | null = null;
         let totalIdleTime = 0;
 
-        for (const point of trace.points) {
-            const [i,,,a] = point;
-            const ms = i * 250;
-            if (['hub1', 'hub5', 'hub10'].includes(a as string)) {
-                lastActionTime = ms;
-                if (lastMoveTime !== null) {
-                    const idleTime = ms - lastMoveTime;
-                    if (idleTime >= thresholdMs) {
-                        totalIdleTime += idleTime;
-                    }
-                }
-            } else {
-                lastMoveTime = ms;
-                if (lastActionTime !== null) {
-                    const idleTime = ms - lastActionTime;
-                    if (idleTime >= thresholdMs) {
-                        totalIdleTime += idleTime;
+        const velMap = trace.speedMap({
+            maxVel: 20,
+            rolloff: true,
+            rolloffVel: 25,
+        });
+
+        // start at 2nd point since the velMap is based on changes between points
+        for (let i = 1; i < trace.points.length; i++) {
+            const [time, , , action] = trace.points[i];
+            const vel = velMap[i] || Infinity; // if no velocity data, assume very high to avoid false idle time
+
+            if (vel <= config.speedThreshold) {
+                if (action) {
+                    // they are doing something
+                    lastActionTime = time;
+                    lastMoveTime = null; // reset move time since they are active
+                } else {
+                    // they are not doing anything, check if they are idle                    
+                    if (lastActionTime !== null && time - lastActionTime >= config.timeThresholdMs) {
+                        // they have been idle for long enough after an action
+                        if (lastMoveTime === null) {
+                            lastMoveTime = time; // start idle timer
+                        } else {
+                            totalIdleTime += time - lastMoveTime; // accumulate idle time
+                            lastMoveTime = time; // reset move timer to current time
+                        }
+                    } else {
+                        lastMoveTime = null; // reset move time if they haven't been idle long enough
                     }
                 }
             }
