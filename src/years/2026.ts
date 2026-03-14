@@ -386,10 +386,12 @@ class YearInfo2026 extends YearInfo<
         cycleTimes: number[];
         depletionTimes: number[];
         scoredPerCycle: number[];
+        weightedCycleTimes: number[];
         weightedDepletionTimes: number[];
     }> {
         return attempt(() => {
             const cycleTimes: number[] = [];
+            const weightedCycleTimes: number[] = [];
             const depletionTimes: number[] = [];
             const weightedDepletionTimes: number[] = [];
             const scoredPerCycle: number[] = [];
@@ -420,6 +422,7 @@ class YearInfo2026 extends YearInfo<
                             // there was a previous cycle
                             const cycleTime = ms - lastStartTime;
                             cycleTimes.push(cycleTime);
+                            weightedCycleTimes.push(cycleTime / lastNumScored);
                         }
                         lastEndTime = ms;
                         lastStartTime = ms;
@@ -438,7 +441,7 @@ class YearInfo2026 extends YearInfo<
                     }
                 }
             }
-            return { cycleTimes, depletionTimes, weightedDepletionTimes, scoredPerCycle };
+            return { cycleTimes, depletionTimes, weightedDepletionTimes, scoredPerCycle, weightedCycleTimes };
         });
     }
 }
