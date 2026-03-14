@@ -444,6 +444,36 @@ class YearInfo2026 extends YearInfo<
             return { cycleTimes, depletionTimes, weightedDepletionTimes, scoredPerCycle, weightedCycleTimes };
         });
     }
+
+    secondsNotMovineWhileNotShooting(trace: Trace, thresholdMs: number): number {
+        let lastActionTime: number | null = null;
+        let lastMoveTime: number | null = null;
+        let totalIdleTime = 0;
+
+        for (const point of trace.points) {
+            const [i,,,a] = point;
+            const ms = i * 250;
+            if (['hub1', 'hub5', 'hub10'].includes(a as string)) {
+                lastActionTime = ms;
+                if (lastMoveTime !== null) {
+                    const idleTime = ms - lastMoveTime;
+                    if (idleTime >= thresholdMs) {
+                        totalIdleTime += idleTime;
+                    }
+                }
+            } else {
+                lastMoveTime = ms;
+                if (lastActionTime !== null) {
+                    const idleTime = ms - lastActionTime;
+                    if (idleTime >= thresholdMs) {
+                        totalIdleTime += idleTime;
+                    }
+                }
+            }
+        }
+
+        return totalIdleTime / 1000; // convert to seconds
+    }
 }
 
 /**
