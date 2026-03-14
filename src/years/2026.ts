@@ -380,16 +380,18 @@ class YearInfo2026 extends YearInfo<
     /**
      * Analyzes robot trace to extract cycle and depletion times
      * @param {Trace} trace - Robot movement and action trace data
-     * @returns 
+     * @returns  {Result<{ cycleTimes: number[]; depletionTimes: number[]; scoredPerCycle: number[]; weightedDepletionTimes: number[] }>} Cycle and depletion time analysis results
      */
     cycleInfo(trace: Trace, cycleTrhesholdMs = CYCLE_THRESHOLD_MS): Result<{
         cycleTimes: number[];
         depletionTimes: number[];
         scoredPerCycle: number[];
+        weightedDepletionTimes: number[];
     }> {
         return attempt(() => {
             const cycleTimes: number[] = [];
             const depletionTimes: number[] = [];
+            const weightedDepletionTimes: number[] = [];
             const scoredPerCycle: number[] = [];
             let lastEndTime: number | null = null;
             let lastStartTime: number | null = null;
@@ -428,6 +430,7 @@ class YearInfo2026 extends YearInfo<
                         if (sinceEnd >= CYCLE_THRESHOLD_MS) {
                             // end of cycle
                             depletionTimes.push(lastEndTime - Number(lastStartTime));
+                            weightedDepletionTimes.push((lastEndTime - Number(lastStartTime)) / lastNumScored);
                             scoredPerCycle.push(lastNumScored);
                             lastEndTime = null;
                             lastNumScored = 0;
@@ -435,7 +438,7 @@ class YearInfo2026 extends YearInfo<
                     }
                 }
             }
-            return { cycleTimes, depletionTimes, scoredPerCycle };
+            return { cycleTimes, depletionTimes, weightedDepletionTimes, scoredPerCycle };
         });
     }
 }
