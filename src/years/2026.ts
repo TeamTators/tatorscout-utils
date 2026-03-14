@@ -332,13 +332,26 @@ class YearInfo2026 extends YearInfo<
         return attempt(() => {
             const cycleTimes: number[] = [];
             const depletionTimes: number[] = [];
+            const scoredPerCycle: number[] = [];
             let lastEndTime: number | null = null;
             let lastStartTime: number | null = null;
+            let lastNumScored = 0;
 
             for (const point of trace.points) {
                 const [i,,,a] = point;
                 const ms = i * 250;
                 if (['hub1', 'hub5', 'hub10'].includes(a as string)) {
+                    switch (a) {
+                        case 'hub1':
+                            lastNumScored += 1;
+                            break;
+                        case 'hub5':
+                            lastNumScored += 5;
+                            break;
+                        case 'hub10':
+                            lastNumScored += 10;
+                            break;
+                    }
                     if (lastEndTime !== null) {
                         // already in cycle
                         lastEndTime = ms;
@@ -357,12 +370,14 @@ class YearInfo2026 extends YearInfo<
                         if (sinceEnd >= CYCLE_THRESHOLD_MS) {
                             // end of cycle
                             depletionTimes.push(lastEndTime - Number(lastStartTime));
+                            scoredPerCycle.push(lastNumScored);
                             lastEndTime = null;
+                            lastNumScored = 0;
                         }
                     }
                 }
             }
-            return { cycleTimes, depletionTimes };
+            return { cycleTimes, depletionTimes, scoredPerCycle };
         });
     }
 }
