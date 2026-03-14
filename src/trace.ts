@@ -719,14 +719,13 @@ export class Trace {
     /**
      * Calculates total time robot was stationary without performing any actions
      * Considers both velocity and action state to determine true inactivity
-     * @param {Trace} trace - Trace data to analyze
      * @param config Configuration options including time threshold, speed threshold, and relevant actions
      * @param {number} config.timeThresholdMs - Minimum time in milliseconds to consider as stationary after an action
      * @param {number} config.speedThreshold - Velocity threshold in fps to consider as not moving
      * @param {string[]} [config.allowedActions] - List of action codes that reset the inactivity timer when performed
      * @returns {number} Total time stationary without actions in seconds
      */
-    secondsNotMovingWithInaction(trace: Trace, config: {
+    secondsIdle(config: {
         timeThresholdMs: number;
         speedThreshold: number;
         allowedActions: string[];
@@ -735,15 +734,15 @@ export class Trace {
         let lastMoveTime: number | null = null;
         let totalIdleTime = 0;
 
-        const velMap = trace.speedMap({
+        const velMap = this.speedMap({
             maxVel: 20,
             rolloff: true,
             rolloffVel: 25,
         });
 
         // start at 2nd point since the velMap is based on changes between points
-        for (let i = 1; i < trace.points.length; i++) {
-            const [time, , , action] = trace.points[i];
+        for (let i = 1; i < this.points.length; i++) {
+            const [time, , , action] = this.points[i];
             const vel = velMap[i] || Infinity; // if no velocity data, assume very high to avoid false idle time
 
             if (vel <= config.speedThreshold) {
