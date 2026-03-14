@@ -721,12 +721,15 @@ export class Trace {
      * Considers both velocity and action state to determine true inactivity
      * @param {Trace} trace - Trace data to analyze
      * @param config Configuration options including time threshold, speed threshold, and relevant actions
+     * @param {number} config.timeThresholdMs - Minimum time in milliseconds to consider as stationary after an action
+     * @param {number} config.speedThreshold - Velocity threshold in fps to consider as not moving
+     * @param {string[]} [config.allowedActions] - List of action codes that reset the inactivity timer when performed
      * @returns {number} Total time stationary without actions in seconds
      */
     secondsNotMovingWithInaction(trace: Trace, config: {
         timeThresholdMs: number;
         speedThreshold: number;
-        actions: string[];
+        allowedActions: string[];
     }): number {
         let lastActionTime: number | null = null;
         let lastMoveTime: number | null = null;
@@ -744,7 +747,7 @@ export class Trace {
             const vel = velMap[i] || Infinity; // if no velocity data, assume very high to avoid false idle time
 
             if (vel <= config.speedThreshold) {
-                if (config.actions.includes(String(action))) {
+                if (config.allowedActions.includes(String(action))) {
                     // they are doing something
                     lastActionTime = time;
                     lastMoveTime = null; // reset move time since they are active
