@@ -385,6 +385,7 @@ class YearInfo2026 extends YearInfo<
     cycleInfo(trace: Trace, cycleTrhesholdMs = CYCLE_THRESHOLD_MS): Result<{
         cycleTimes: number[];
         depletionTimes: number[];
+        scoredPerCycle: number[];
     }> {
         return attempt(() => {
             const cycleTimes: number[] = [];
