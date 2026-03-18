@@ -454,6 +454,7 @@ export const Timer2026: Timer = {
     shift3: [80, 105],
     shift4: [105, 130],
     endgame: [130, 160],
+    end: [160, 170],
 }
 
 /**
