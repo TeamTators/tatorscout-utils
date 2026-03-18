@@ -336,9 +336,8 @@ class YearInfo2025 extends YearInfo<
 
 export const Timer2025: Timer = {
     auto: [0, 15],
-    teleop: [15, 120],
-    endgame: [110, 130],
-    end: [130, 140],
+    teleop: [16, 120],
+    endgame: [121, 140],
 };
 
 /**

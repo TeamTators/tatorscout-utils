@@ -400,8 +400,7 @@ class YearInfo2024 extends YearInfo<
 
 export const Timer2024: Timer = {
     auto: [0, 15],
-    teleop: [15, 130],
-    end: [130, 140],
+    teleop: [16, 140],
 }
 
 /**

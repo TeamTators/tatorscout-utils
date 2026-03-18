@@ -136,6 +136,9 @@ export class YearInfo<
         public readonly actionZones: ActionZones,
         public readonly timer: TimerSections,
     ) {
+        if (!('auto' in timer)) {
+            throw new Error('Timer must include an "auto" section');
+        }
     }
 
     /**

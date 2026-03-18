@@ -448,13 +448,12 @@ class YearInfo2026 extends YearInfo<
 
 export const Timer2026: Timer = {
     auto: [0, 20],
-    transition: [20, 30],
-    shift1: [30, 55],
-    shift2: [55, 80],
-    shift3: [80, 105],
-    shift4: [105, 130],
-    endgame: [130, 160],
-    end: [160, 170],
+    transition: [21, 30],
+    shift1: [31, 55],
+    shift2: [56, 80],
+    shift3: [81, 105],
+    shift4: [106, 130],
+    endgame: [131, 170],
 }
 
 /**
