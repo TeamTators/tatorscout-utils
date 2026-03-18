@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
+import { type AllianceZoneMap, Timer, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { Aggregators, createTypedSummary, SummarySchema } from "../summary";
@@ -334,7 +334,7 @@ class YearInfo2025 extends YearInfo<
     }
 }
 
-export const Timer2025 = {
+export const Timer2025: Timer = {
     auto: [0, 15],
     teleop: [15, 120],
     endgame: [110, 130]

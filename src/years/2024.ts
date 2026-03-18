@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { YearInfo } from ".";
+import { Timer, YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { attempt, Result } from "ts-utils/check";
@@ -398,7 +398,7 @@ class YearInfo2024 extends YearInfo<
     }
 }
 
-export const Timer2024 = {
+export const Timer2024: Timer = {
     auto: [0, 15],
     teleop: [15, 120],
 }
