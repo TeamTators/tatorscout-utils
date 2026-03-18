@@ -334,6 +334,12 @@ class YearInfo2025 extends YearInfo<
     }
 }
 
+export const Timer2025 = {
+    auto: [0, 15],
+    teleop: [15, 120],
+    endgame: [110, 130]
+};
+
 /**
  * Default instance of YearInfo2025 with complete field layout and scoring rules
  * Ready to use for 2025 REEFSCAPE game analysis
@@ -362,5 +368,6 @@ export default new YearInfo2025(
     ],
     actions2025,
     scoreBreakdown2025,
-    actionZones2025
+    actionZones2025,
+    Timer2025
 );

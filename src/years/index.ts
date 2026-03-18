@@ -82,6 +82,11 @@ export type ParsedBreakdown<Actions extends string> = {
 export type TimeAction<Actions extends string> = `${'auto' | 'teleop' | 'endgame'}.${Actions}`;
 
 /**
+ * Record of segmented times of a match
+ */
+export type Timer = Record<string, [number, number]>;
+
+/**
  * Base class for year-specific game information and analysis
  * Provides structure for field layout, scoring rules, and trace analysis
  * 
@@ -112,6 +117,7 @@ export class YearInfo<
     Score extends ScoreBreakdown<Actions> = ScoreBreakdown<Actions>,
     ParsedScoreBreakdown extends ParsedBreakdown<Actions> = ParsedBreakdown<Actions>,
     ActionZones extends AllianceZoneMap = AllianceZoneMap,
+    TimerSections extends Timer = Timer,
 > {
     /**
      * Creates a new YearInfo instance
@@ -128,6 +134,7 @@ export class YearInfo<
         public readonly actions: Record<Actions, string>,
         public readonly scoreBreakdown: Score,
         public readonly actionZones: ActionZones,
+        public readonly timer: TimerSections,
     ) {
     }
 

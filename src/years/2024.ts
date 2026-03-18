@@ -398,6 +398,11 @@ class YearInfo2024 extends YearInfo<
     }
 }
 
+export const Timer2024 = {
+    auto: [0, 15],
+    teleop: [15, 120],
+}
+
 /**
  * Default instance of YearInfo2024 with complete field layout and scoring rules
  * Ready to use for 2024 CRESCENDO game analysis
@@ -433,7 +438,8 @@ export default new YearInfo2024(
     ],
     actions2024,
     scoreBreakdown2024,
-    actionZones2024
+    actionZones2024,
+    Timer2024
 );
 
 

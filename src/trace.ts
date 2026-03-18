@@ -3,6 +3,7 @@ import Year2024 from "./years/2024";
 import Year2025 from "./years/2025";
 import Year2026 from './years/2026';
 import { attempt } from "ts-utils/check";
+import { YearInfo } from "./years";
 
 /**
  * Configuration options for velocity calculations
@@ -327,18 +328,6 @@ export class Trace {
 
         return expanded;
     }
-
-    static getSection(point: P) {
-        if (!point) return null;
-
-        const [time] = point;
-        if (time < 15 * 4) return 'auto';
-        if (time < 135 * 4) return 'teleop';
-        if (time < 150 * 4) return 'endgame';
-
-        return null;
-    }
-
     /**
      * Removes redundant points from an expanded trace to create sparse representation
      * Eliminates consecutive points with same position and no action
@@ -703,17 +692,12 @@ export class Trace {
      * @param section Time section to retrieve
      * @returns {TraceArray} Array of trace points for the section
      */
-    getSection(section: 'auto' | 'teleop' | 'endgame'): TraceArray {
-        switch (section) {
-            case 'auto':
-                return this.points.slice(0, 15 * 4) as TraceArray;
-            case 'teleop':
-                return this.points.slice(15 * 4, 135 * 4) as TraceArray;
-            case 'endgame':
-                return this.points.slice(135 * 4, 150 * 4) as TraceArray;
-            default:
-                return [];
-        }
+    getSection<Y extends YearInfo>(section: keyof Y['timer'], yearInfo: Y): TraceArray {
+        const [start, end] = yearInfo.timer[section as keyof typeof yearInfo.timer];
+        return this.points.slice(
+            start * 4,
+            end * 4
+        ) as TraceArray;
     }
 
     /**
