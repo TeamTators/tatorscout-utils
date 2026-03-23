@@ -142,6 +142,9 @@ const actions2026 = {
     lob1: 'Lob 1',
     lob5: 'Lob 5',
     lob10: 'Lob 10',
+    her5: 'Herd 5',
+    her10: 'Herd 10',
+    her25: 'Herd 25',
     out: 'Outpost',
 };
 
