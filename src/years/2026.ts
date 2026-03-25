@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { YearInfo } from ".";
+import { Timer, YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { attempt, type Result } from "ts-utils/check";
@@ -447,7 +447,16 @@ class YearInfo2026 extends YearInfo<
             return { cycleTimes, depletionTimes, weightedDepletionTimes, scoredPerCycle, weightedCycleTimes };
         });
     }
+}
 
+export const Timer2026: Timer = {
+    auto: [0, 20],
+    transition: [21, 30],
+    shift1: [31, 55],
+    shift2: [56, 80],
+    shift3: [81, 105],
+    shift4: [106, 130],
+    endgame: [131, 170],
 }
 
 /**
@@ -471,5 +480,6 @@ export default new YearInfo2026(
     ],
     actions2026,
     scoreBreakdown2026,
-    actionZones2026
+    actionZones2026,
+    Timer2026
 );
