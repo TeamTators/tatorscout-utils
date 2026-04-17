@@ -52,7 +52,7 @@ export class TraceError extends Error {
  * - Action: string code or 0 (no action)
  */
 export const TraceSchema = z.array(z.tuple([
-    z.number().min(0).max(640).int(),
+    z.number().min(0).int(),
     z.number().min(0).max(1),
     z.number().min(0).max(1),
     z.union([
@@ -486,9 +486,9 @@ export class Trace {
     constructor(
         public readonly points: z.infer<typeof TraceSchema>
     ) {
-        if (points.length !== 640) {
-            throw new Error(`Trace must have exactly 640 points. Got ${points.length}`);
-        }
+        // if (points.length !== 640) {
+        //     throw new Error(`Trace must have exactly 640 points. Got ${points.length}`);
+        // }
     }
 
     /**
