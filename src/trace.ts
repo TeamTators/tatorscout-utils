@@ -47,12 +47,12 @@ export class TraceError extends Error {
 /**
  * Zod schema for validating decompressed trace data
  * Ensures trace points have valid structure and value ranges
- * - Index: 0-640 (quarter-second intervals in a match and buffer)
+ * - Index: 0-720 (quarter-second intervals in a match and buffer)
  * - X/Y coordinates: 0-1 (normalized field positions)
  * - Action: string code or 0 (no action)
  */
 export const TraceSchema = z.array(z.tuple([
-    z.number().min(0).int(),
+    z.number().min(0).max(720).int(),
     z.number().min(0).max(1),
     z.number().min(0).max(1),
     z.union([
@@ -281,24 +281,24 @@ export class Trace {
      * ```
      */
     static expand(trace: TraceArray) {
-        if (trace.length === 640) {
+        if (trace.length === 720) {
             return trace;
         }
-        if (trace.length > 640) {
-            // truncate to 640 points by removing duplicate time points
+        if (trace.length > 720) {
+            // truncate to 720 points by removing duplicate time points
             const seen = new Set<number>();
             const truncated: TraceArray = [];
             for (const point of trace) {
-                if (!seen.has(point[0]) && point[0] < 640) {
+                if (!seen.has(point[0]) && point[0] < 720) {
                     truncated.push(point);
                     seen.add(point[0]);
                 }
-                if (truncated.length === 640) break;
+                if (truncated.length === 720) break;
             }
             return truncated;
         }
         
-        // Ensure we have a complete 640-point array
+        // Ensure we have a complete 720-point array
         const expanded: TraceArray = [];
         
         // Create a map of existing points by time index
@@ -308,7 +308,7 @@ export class Trace {
         }
         
         // Fill in all points from 0 to 639
-        for (let i = 0; i < 640; i++) {
+        for (let i = 0; i < 720; i++) {
             if (pointMap.has(i)) {
                 // Use existing point
                 expanded.push(pointMap.get(i)!);
@@ -486,8 +486,8 @@ export class Trace {
     constructor(
         public readonly points: z.infer<typeof TraceSchema>
     ) {
-        // if (points.length !== 640) {
-        //     throw new Error(`Trace must have exactly 640 points. Got ${points.length}`);
+        // if (points.length !== 720) {
+        //     throw new Error(`Trace must have exactly 720 points. Got ${points.length}`);
         // }
     }
 
