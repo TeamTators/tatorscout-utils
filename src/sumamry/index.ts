@@ -1,9 +1,36 @@
+/**
+ * @fileoverview
+ * Schema-driven team summary and ranking utilities.
+ *
+ * This module computes per-team summary points from trace rows and offers
+ * ranking helpers for group/item metrics.
+ *
+ * @example
+ * const summary = new Summary(parseTrace, {
+ *   auto: {
+ *     notes: ({ scoring }) => scoring.map(s => s.autoNotes),
+ *   },
+ * });
+ *
+ * const computed = summary.computeAll(teamTraces, matches);
+ *
+ * const rankedTeams = computed.rank("auto", "notes");
+ * const teamRank = computed.team(1678).rank("auto", "notes", "median");
+ */
 import { attempt, Result } from "ts-utils/check";
 import { Trace } from "../trace";
 import { z } from 'zod';
-import { TBAMatch, teamsFromMatch } from "../tba";
+import { TBAMatch } from "../tba";
 
 
+/**
+ * Defines the summary computation schema.
+ *
+ * Each item function receives team-specific data and returns a list of
+ * numeric values that become a Point.
+ *
+ * @template T Parsed scoring row shape.
+ */
 export interface SummarySchema<T> {
     [groupName: string]: {
         [itemName: string]: (data: {
@@ -19,13 +46,6 @@ type GroupNames<T, S extends SummarySchema<T>> = keyof S;
 type ItemNames<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> = keyof S[G];
 
 
-// avg, median, min, max, stddev, mode
-type TeamComputedSummaryNumber<T, S extends SummarySchema<T>> = {
-    [G in GroupNames<T, S>]: {
-        [I in ItemNames<T, S, G>]: number;
-    }
-}
-
 type TeamComputedSummaryType<T, S extends SummarySchema<T>> = {
     [G in GroupNames<T, S>]: {
         [I in ItemNames<T, S, G>]: Point;
@@ -33,13 +53,26 @@ type TeamComputedSummaryType<T, S extends SummarySchema<T>> = {
 };
 
 class Point {
-    constructor(public readonly values: number[]) {}
+    public readonly values: readonly number[];
 
+    /**
+     * @param {number[]} values Raw numeric values for one team and one item.
+     */
+    constructor(values: number[]) {
+        this.values = [...values];
+    }
+
+    /**
+     * @returns {number} Arithmetic mean, or 0 when no values exist.
+     */
     average(): number {
         if (this.values.length === 0) return 0;
         return this.values.reduce((a, b) => a + b, 0) / this.values.length;
     }
 
+    /**
+     * @returns {number} Median value, or 0 when no values exist.
+     */
     median(): number {
         if (this.values.length === 0) return 0;
         const sorted = [...this.values].sort((a, b) => a - b);
@@ -51,16 +84,27 @@ class Point {
         }
     }
 
+    /**
+     * @returns {number} Minimum value, or 0 when no values exist.
+     */
     min(): number {
         if (this.values.length === 0) return 0;
         return Math.min(...this.values);
     }
 
+    /**
+     * @returns {number} Maximum value, or 0 when no values exist.
+     */
     max(): number {
         if (this.values.length === 0) return 0;
         return Math.max(...this.values);
     }
 
+    /**
+     * Computes population standard deviation.
+     *
+     * @returns {number} Population standard deviation, or 0 when empty.
+     */
     stddev(): number {
         if (this.values.length === 0) return 0;
         const mean = this.average();
@@ -68,6 +112,13 @@ class Point {
         return Math.sqrt(variance);
     }
 
+    /**
+     * Returns the most frequent value.
+     *
+     * In case of ties, the first value that reached max frequency is used.
+     *
+     * @returns {number} Mode, or 0 when no values exist.
+     */
     mode(): number {
         if (this.values.length === 0) return 0;
         const frequency: { [value: number]: number } = {};
@@ -85,6 +136,11 @@ class Point {
         return modeValue;
     }
 
+    /**
+     * Computes coefficient of variation.
+     *
+     * @returns {number} stddev / mean, or 0 if mean is 0.
+     */
     coefficientOfVariation(): number {
         const mean = this.average();
         if (mean === 0) return 0;
@@ -92,18 +148,28 @@ class Point {
     }
 }
 
-class TeamComputedSummary<T, S extends SummarySchema<T>> {
-    constructor(public readonly team: number, public readonly data: TeamComputedSummaryType<T, S>, public readonly parent: Summary<T, S>) {}
-}
 
 type ComputedSummaryType<T, S extends SummarySchema<T>> = {
     [team: string]: TeamComputedSummaryType<T, S>;
 }
 
-// avg, median, min, max, stddev, mode
-type ComputedSummaryNumber<T, S extends SummarySchema<T>> = {
-    [team: string]: TeamComputedSummaryNumber<T, S>;
-}
+type RankedTeam = {
+    team: number;
+    score: number;
+    rank: number;
+};
+
+/**
+ * Supported aggregate metric used by ranking methods.
+ */
+export type RankMetric =
+    | "average"
+    | "median"
+    | "min"
+    | "max"
+    | "stddev"
+    | "mode"
+    | "coefficientOfVariation";
 
 /** Combined type including both schema-based and extra summary data */
 type CombinedSummaryType<T, S extends SummarySchema<T>> = {
@@ -112,8 +178,20 @@ type CombinedSummaryType<T, S extends SummarySchema<T>> = {
 };
 
 export class Summary<T, S extends SummarySchema<T>> {
+    /**
+     * @param {(trace: Trace) => T} traceParser Converts a Trace into parsed scoring data.
+     * @param {S} schema Group/item schema used for summary computation.
+     */
     constructor(public readonly traceParser: (trace: Trace) => T, public readonly schema: S) {}
 
+    /**
+     * Computes summary data for a single team.
+     *
+     * @param {number} team Team number.
+     * @param {TBAMatch[]} matches Match list available to schema item functions.
+     * @param {Trace[]} traces Trace rows for the team.
+     * @returns {TeamComputedSummaryType<T, S>} Computed points by group and item.
+     */
     computeTeam(team: number, matches: TBAMatch[], traces: Trace[]): TeamComputedSummaryType<T, S> {
         const results = traces.map(trace => this.traceParser(trace));
         const summary = {} as TeamComputedSummaryType<T, S>;
@@ -126,16 +204,38 @@ export class Summary<T, S extends SummarySchema<T>> {
         return summary;
     }
 
+    /**
+     * Computes summaries for all teams in the provided dataset.
+     *
+     * @param {{ [team: string]: Trace[] }} data Team-number keyed trace rows.
+     * @param {TBAMatch[]} matches Match list available to schema item functions.
+     * @returns {ComputedSummary<T, S>} Computed summary wrapper with ranking helpers.
+     * @throws {Error} When a team key is not numeric.
+     */
     computeAll(data: { [team: string]: Trace[] }, matches: TBAMatch[]) {
         const result: ComputedSummaryType<T, S> = {};
 
         for (const team in data) {
-            result[team] = this.computeTeam(parseInt(team), matches, data[team]);
+            const teamNumber = Number(team);
+            if (!Number.isFinite(teamNumber)) {
+                throw new Error(`Invalid team key '${team}'. Team keys must be numeric.`);
+            }
+
+            result[team] = this.computeTeam(teamNumber, matches, data[team]);
         }
 
         return new ComputedSummary<T, S>({ schema: result }, this);
     }
 
+    /**
+     * Deserializes a previously serialized summary payload.
+     *
+     * Validates structure and checks that required schema groups/items exist
+     * for each team.
+     *
+     * @param {string} serialized JSON payload.
+     * @returns {Result<ComputedSummary<T, S>>} Computed summary wrapped in Result.
+     */
     deserialize(serialized: string): Result<ComputedSummary<T, S>> {
         return attempt(() => {
             const parsed = z.object({
@@ -168,11 +268,24 @@ export class Summary<T, S extends SummarySchema<T>> {
 };
 
 class Group<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> {
+    /**
+     * @param {G} name Group key.
+     * @param {S[G]} items Group item functions.
+     */
     constructor(
         public readonly name: G,
         public readonly items: S[G],
     ) {}
 
+    /**
+     * Computes all items in this group for one team.
+     *
+     * @param {number} team Team number.
+     * @param {T[]} data Parsed scoring rows.
+     * @param {Trace[]} traces Raw trace rows.
+     * @param {TBAMatch[]} matches Match rows.
+     * @returns {TeamComputedSummaryType<T, S>[G]} Group data as Points.
+     */
     compute(team: number, data: T[], traces: Trace[], matches: TBAMatch[]): TeamComputedSummaryType<T, S>[G] {
         const result = {} as {
             [I in ItemNames<T, S, G>]: Point;
@@ -195,11 +308,224 @@ class Group<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> {
 export class ComputedSummary<T, S extends SummarySchema<T>> {
     readonly schemaData: ComputedSummaryType<T, S>;
     // readonly extraData: Extra;
+
+    /**
+     * @param {CombinedSummaryType<T, S>} data Computed schema payload.
+     * @param {Summary<T, S>} parent Parent Summary instance.
+     */
     constructor(data: CombinedSummaryType<T, S>, public readonly parent: Summary<T, S>) {
         this.schemaData = data.schema;
     }
 
+    /**
+     * Accessor for the schema used to compute this summary.
+     *
+     * @returns {S} Schema object.
+     */
     get parser(): S {
         return this.parent.schema;
+    }
+
+    /**
+     * Returns a team-scoped helper API.
+     *
+     * @param {number | string} team Team number.
+     * @returns {ComputedTeamSummary<T, S>} Team wrapper for rank lookups.
+     * @throws {Error} When the team is missing in this summary.
+     *
+     * @example
+     * const teamApi = computed.team(1678);
+     * const rank = teamApi.rank("auto", "notes", "average");
+     */
+    team(team: number | string) {
+        const teamKey = String(team);
+        if (!(teamKey in this.schemaData)) {
+            throw new Error(`Team '${teamKey}' is not present in this summary.`);
+        }
+
+        return new ComputedTeamSummary<T, S>(teamKey, this);
+    }
+
+    private scorePoint(point: Point, metric: RankMetric): number {
+        switch (metric) {
+            case "average":
+                return point.average();
+            case "median":
+                return point.median();
+            case "min":
+                return point.min();
+            case "max":
+                return point.max();
+            case "stddev":
+                return point.stddev();
+            case "mode":
+                return point.mode();
+            case "coefficientOfVariation":
+                return point.coefficientOfVariation();
+            default:
+                throw new Error(`Unsupported ranking metric '${metric}'.`);
+        }
+    }
+
+    private getRankedTeams<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, metric: RankMetric): RankedTeam[] {
+        if (!(group in this.parent.schema)) {
+            throw new Error(`Unknown group '${String(group)}'.`);
+        }
+
+        if (!(item in this.parent.schema[group])) {
+            throw new Error(`Unknown item '${String(item)}' in group '${String(group)}'.`);
+        }
+
+        const scoredTeams = Object.entries(this.schemaData).map(([team, teamData]) => {
+            const point = teamData[group][item];
+            return {
+                team,
+                score: this.scorePoint(point, metric),
+            };
+        });
+
+        scoredTeams.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return Number(a.team) - Number(b.team);
+        });
+
+        let currentRank = 0;
+        let previousScore: number | null = null;
+
+        return scoredTeams.map((entry, index) => {
+            if (previousScore === null || entry.score !== previousScore) {
+                currentRank = index + 1;
+                previousScore = entry.score;
+            }
+
+            return {
+                team: Number(entry.team),
+                score: entry.score,
+                rank: currentRank,
+            };
+        });
+    }
+
+    /**
+     * Returns team numbers ordered by descending score for one group/item pair.
+     *
+     * @template G Group key.
+     * @template I Item key in group G.
+     * @param {G} group Group name.
+     * @param {I} item Item name.
+     * @param {RankMetric} [metric="average"] Metric used to score each team.
+     * @returns {number[]} Team numbers from highest to lowest metric value.
+     *
+     * @example
+     * const ordered = computed.rank("auto", "notes");
+     * const byMedian = computed.rank("auto", "notes", "median");
+     */
+    rank<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, metric: RankMetric = "average"): number[] {
+        return this.getRankedTeams(group, item, metric).map(entry => entry.team);
+    }
+
+    /**
+     * Returns the rank for one team in one group/item pair.
+     *
+     * Ranking uses competition ranking semantics: tied teams share rank and
+     * later ranks are skipped.
+     *
+     * @template G Group key.
+     * @template I Item key in group G.
+     * @param {number | string} team Team number to query.
+     * @param {G} group Group name.
+     * @param {I} item Item name.
+     * @param {RankMetric} [metric="average"] Metric used to score each team.
+     * @returns {number} 1-based rank for the team.
+     * @throws {Error} When team id is invalid or team is not present.
+     *
+     * @example
+     * const rank = computed.teamRank(1678, "auto", "notes", "max");
+     */
+    teamRank<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(team: number | string, group: G, item: I, metric: RankMetric = "average"): number {
+        const teamNumber = Number(team);
+        if (!Number.isFinite(teamNumber)) {
+            throw new Error(`Invalid team '${String(team)}'. Team must be numeric.`);
+        }
+
+        const ranked = this.getRankedTeams(group, item, metric);
+        const found = ranked.find(entry => entry.team === teamNumber);
+        if (!found) {
+            throw new Error(`Team '${teamNumber}' is not present in this summary.`);
+        }
+
+        return found.rank;
+    }
+
+    /**
+     * Pivots data from team-first structure to group/item-first structure.
+     *
+     * Output shape: pivoted[group][item][team] = Point.
+     *
+     * @returns {{ [group in GroupNames<T, S>]: { [item in ItemNames<T, S, group>]: { [team: string]: Point } } }}
+     * Pivoted summary data.
+     */
+    pivot() {
+        type PivotedSummaryType = {
+            [group in GroupNames<T, S>]: {
+                [item in ItemNames<T, S, group>]: {
+                    [team: string]: Point;
+                }
+            }
+        };
+
+        const pivoted = {} as PivotedSummaryType;
+
+        for (const team in this.schemaData) {
+            const teamData = this.schemaData[team];
+
+            for (const group in teamData) {
+                if (!(group in pivoted)) {
+                    pivoted[group] = {} as PivotedSummaryType[typeof group];
+                }
+
+                const groupData = teamData[group];
+                const pivotedGroup = pivoted[group];
+
+                for (const item in groupData) {
+                    if (!(item in pivoted[group])) {
+                        pivoted[group][item] = {};
+                    }
+
+                    const pivotedItem = pivotedGroup[item] as { [team: string]: Point };
+                    pivotedItem[team] = groupData[item];
+                }
+            }
+        }
+
+        return pivoted;
+    }
+}
+
+class ComputedTeamSummary<T, S extends SummarySchema<T>> {
+    /**
+     * @param {string} team Team id as string.
+     * @param {ComputedSummary<T, S>} parent Parent computed summary.
+     */
+    constructor(
+        public readonly team: string,
+        private readonly parent: ComputedSummary<T, S>,
+    ) {}
+
+    /**
+     * Returns this team's rank for one group/item pair.
+     *
+     * @template G Group key.
+     * @template I Item key in group G.
+     * @param {G} group Group name.
+     * @param {I} item Item name.
+     * @param {RankMetric} [metric="average"] Metric used to score each team.
+     * @returns {number} 1-based rank.
+     *
+     * @example
+     * const rank = computed.team(1678).rank("auto", "notes", "median");
+     */
+    rank<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, metric: RankMetric = "average"): number {
+        return this.parent.teamRank(this.team, group, item, metric);
     }
 }
