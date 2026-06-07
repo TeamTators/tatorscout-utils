@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { type AllianceZoneMap, YearInfo, type Zone, type ZoneMap } from ".";
+import { type AllianceZoneMap, Timer, YearInfo, type Zone, type ZoneMap } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { TBAMatch } from "../tba";
@@ -332,6 +332,12 @@ class YearInfo2025 extends YearInfo<
     }
 }
 
+export const Timer2025: Timer = {
+    auto: [0, 15],
+    teleop: [16, 120],
+    endgame: [121, 140],
+};
+
 /**
  * Default instance of YearInfo2025 with complete field layout and scoring rules
  * Ready to use for 2025 REEFSCAPE game analysis
@@ -360,5 +366,6 @@ export default new YearInfo2025(
     ],
     actions2025,
     scoreBreakdown2025,
-    actionZones2025
+    actionZones2025,
+    Timer2025
 );

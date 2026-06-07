@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { YearInfo } from ".";
+import { Timer, YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { attempt, type Result } from "ts-utils/check";
@@ -33,16 +33,16 @@ const globalZones2026 = {
 const allianceZones2026 = {
     zones: {
         blue: [
-            [0.051, 0.045],
-            [0.269, 0.045],
-            [0.269, 0.948],
-            [0.051, 0.948]
+            [0, 0],
+            [0.269, 0],
+            [0.269, 1],
+            [0, 1]
         ],
         red: [
-            [0.730, 0.047],
-            [0.947, 0.047],
-            [0.947, 0.948],
-            [0.730, 0.948]
+            [0.730, 0],
+            [1, 0],
+            [1, 1],
+            [0.730, 1]
         ]
     },
     bump: {
@@ -142,10 +142,70 @@ const actions2026 = {
     lob1: 'Lob 1',
     lob5: 'Lob 5',
     lob10: 'Lob 10',
+    her5: 'Herd 5',
+    her10: 'Herd 10',
+    her25: 'Herd 25',
     out: 'Outpost',
 };
 
-const actionZones2026 = {};
+const actionZones2026 = {
+    'Zone 1': {
+        blue:[[0.302, 0.773],
+            [0.302, 0.948],
+            [0.215, 0.948],
+            [0.215, 0.773]],
+        red: [[0.769, 0.773],
+            [0.769, 0.948],
+            [0.695, 0.948],
+            [0.695, 0.773]],
+        },
+    'Zone 2': {
+        blue:[[0.215, 0.637],
+            [0.302, 0.637],
+            [0.302, 0.773],
+            [0.215, 0.773]],
+        red:[[0.695, 0.637],
+            [0.769, 0.637],
+            [0.769, 0.773],
+            [0.695, 0.773]]},
+    'Zone 3': {
+        blue:[[0.215, 0.492],
+            [0.302, 0.492],
+            [0.302, 0.637],
+            [0.215, 0.637]],
+        red:[[0.695, 0.492],
+            [0.769, 0.492],
+            [0.769, 0.637],
+            [0.695, 0.637]]},
+    'Zone 4': {
+        blue:[[0.215, 0.346],
+            [0.302, 0.346],
+            [0.302, 0.492],
+            [0.215, 0.492]],
+        red:[[0.695, 0.346],
+            [0.769, 0.346],
+            [0.769, 0.492],
+            [0.695, 0.492]]
+        },
+    'Zone 5': {
+        blue: [[0.215, 0.195],
+                [0.302, 0.195],
+                [0.302, 0.346],
+                [0.215, 0.346]],
+        red: [[0.695, 0.195],
+                [0.769, 0.195],
+                [0.769, 0.346],
+                [0.695, 0.346]]},
+    'Zone 6': {
+        blue:[[0.215, 0.041],
+                [0.302, 0.041],
+                [0.302, 0.195],
+                [0.215, 0.195]],
+        red:[[0.695, 0.041],
+                [0.769, 0.041],
+                [0.769, 0.195],
+                [0.695, 0.195]]}
+    };
 
 /**
  * Point values for each action in different game periods for 2026 REBUILT
@@ -323,22 +383,40 @@ class YearInfo2026 extends YearInfo<
     /**
      * Analyzes robot trace to extract cycle and depletion times
      * @param {Trace} trace - Robot movement and action trace data
-     * @returns 
+     * @returns  {Result<{ cycleTimes: number[]; depletionTimes: number[]; scoredPerCycle: number[]; weightedDepletionTimes: number[] }>} Cycle and depletion time analysis results
      */
     cycleInfo(trace: Trace, cycleTrhesholdMs = CYCLE_THRESHOLD_MS): Result<{
         cycleTimes: number[];
         depletionTimes: number[];
+        scoredPerCycle: number[];
+        weightedCycleTimes: number[];
+        weightedDepletionTimes: number[];
     }> {
         return attempt(() => {
             const cycleTimes: number[] = [];
+            const weightedCycleTimes: number[] = [];
             const depletionTimes: number[] = [];
+            const weightedDepletionTimes: number[] = [];
+            const scoredPerCycle: number[] = [];
             let lastEndTime: number | null = null;
             let lastStartTime: number | null = null;
+            let lastNumScored = 0;
 
             for (const point of trace.points) {
                 const [i,,,a] = point;
                 const ms = i * 250;
                 if (['hub1', 'hub5', 'hub10'].includes(a as string)) {
+                    switch (a) {
+                        case 'hub1':
+                            lastNumScored += 1;
+                            break;
+                        case 'hub5':
+                            lastNumScored += 5;
+                            break;
+                        case 'hub10':
+                            lastNumScored += 10;
+                            break;
+                    }
                     if (lastEndTime !== null) {
                         // already in cycle
                         lastEndTime = ms;
@@ -347,6 +425,7 @@ class YearInfo2026 extends YearInfo<
                             // there was a previous cycle
                             const cycleTime = ms - lastStartTime;
                             cycleTimes.push(cycleTime);
+                            weightedCycleTimes.push(cycleTime / lastNumScored);
                         }
                         lastEndTime = ms;
                         lastStartTime = ms;
@@ -357,14 +436,27 @@ class YearInfo2026 extends YearInfo<
                         if (sinceEnd >= CYCLE_THRESHOLD_MS) {
                             // end of cycle
                             depletionTimes.push(lastEndTime - Number(lastStartTime));
+                            weightedDepletionTimes.push((lastEndTime - Number(lastStartTime)) / lastNumScored);
+                            scoredPerCycle.push(lastNumScored);
                             lastEndTime = null;
+                            lastNumScored = 0;
                         }
                     }
                 }
             }
-            return { cycleTimes, depletionTimes };
+            return { cycleTimes, depletionTimes, weightedDepletionTimes, scoredPerCycle, weightedCycleTimes };
         });
     }
+}
+
+export const Timer2026: Timer = {
+    auto: [0, 20],
+    transition: [21, 30],
+    shift1: [31, 55],
+    shift2: [56, 80],
+    shift3: [81, 105],
+    shift4: [106, 130],
+    endgame: [131, 180],
 }
 
 /**
@@ -388,5 +480,6 @@ export default new YearInfo2026(
     ],
     actions2026,
     scoreBreakdown2026,
-    actionZones2026
+    actionZones2026,
+    Timer2026
 );

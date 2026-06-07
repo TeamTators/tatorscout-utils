@@ -1,7 +1,21 @@
 import { z } from "zod";
 import Year2024 from "./years/2024";
 import Year2025 from "./years/2025";
+import Year2026 from './years/2026';
 import { attempt } from "ts-utils/check";
+import { YearInfo } from "./years";
+
+/**
+ * Configuration options for velocity calculations
+ */
+export type VelocityConfig = {
+    /* Maximum velocity to consider for histogram (fps) */
+    maxVel: number;
+    /* Whether to apply rolloff to high velocities */
+    rolloff: boolean;
+    /* Velocity at which rolloff begins (fps) if rolloff is true, everything over this point is ignored, everything between maxVel and rolloffVel is capped at maxVel */
+    rolloffVel: number;
+}
 
 /**
  * Custom error class for trace-related operations
@@ -33,12 +47,12 @@ export class TraceError extends Error {
 /**
  * Zod schema for validating decompressed trace data
  * Ensures trace points have valid structure and value ranges
- * - Index: 0-640 (quarter-second intervals in a match and buffer)
+ * - Index: 0-720 (quarter-second intervals in a match and buffer)
  * - X/Y coordinates: 0-1 (normalized field positions)
  * - Action: string code or 0 (no action)
  */
 export const TraceSchema = z.array(z.tuple([
-    z.number().min(0).max(640).int(),
+    z.number().min(0).max(720).int(),
     z.number().min(0).max(1),
     z.number().min(0).max(1),
     z.union([
@@ -58,7 +72,7 @@ export const TraceSchema = z.array(z.tuple([
  * Includes actions from both 2024 CRESCENDO and 2025 REEFSCAPE
  * @typedef {Action}
  */
-export type Action = keyof typeof Year2024.actions | keyof typeof Year2025.actions;
+export type Action = keyof typeof Year2024.actions | keyof typeof Year2025.actions | keyof typeof Year2026.actions;
 
 /**
  * Character set used for base-52 number compression
@@ -267,24 +281,24 @@ export class Trace {
      * ```
      */
     static expand(trace: TraceArray) {
-        if (trace.length === 640) {
+        if (trace.length === 720) {
             return trace;
         }
-        if (trace.length > 640) {
-            // truncate to 640 points by removing duplicate time points
+        if (trace.length > 720) {
+            // truncate to 720 points by removing duplicate time points
             const seen = new Set<number>();
             const truncated: TraceArray = [];
             for (const point of trace) {
-                if (!seen.has(point[0]) && point[0] < 640) {
+                if (!seen.has(point[0]) && point[0] < 720) {
                     truncated.push(point);
                     seen.add(point[0]);
                 }
-                if (truncated.length === 640) break;
+                if (truncated.length === 720) break;
             }
             return truncated;
         }
         
-        // Ensure we have a complete 640-point array
+        // Ensure we have a complete 720-point array
         const expanded: TraceArray = [];
         
         // Create a map of existing points by time index
@@ -294,7 +308,7 @@ export class Trace {
         }
         
         // Fill in all points from 0 to 639
-        for (let i = 0; i < 640; i++) {
+        for (let i = 0; i < 720; i++) {
             if (pointMap.has(i)) {
                 // Use existing point
                 expanded.push(pointMap.get(i)!);
@@ -314,18 +328,6 @@ export class Trace {
 
         return expanded;
     }
-
-    static getSection(point: P) {
-        if (!point) return null;
-
-        const [time] = point;
-        if (time < 15 * 4) return 'auto';
-        if (time < 135 * 4) return 'teleop';
-        if (time < 150 * 4) return 'endgame';
-
-        return null;
-    }
-
     /**
      * Removes redundant points from an expanded trace to create sparse representation
      * Eliminates consecutive points with same position and no action
@@ -484,15 +486,16 @@ export class Trace {
     constructor(
         public readonly points: z.infer<typeof TraceSchema>
     ) {
-        if (points.length !== 640) {
-            throw new Error(`Trace must have exactly 640 points. Got ${points.length}`);
-        }
+        // if (points.length !== 720) {
+        //     throw new Error(`Trace must have exactly 720 points. Got ${points.length}`);
+        // }
     }
 
     /**
      * Calculates velocity between consecutive trace points
      * Returns array of velocities in feet per second
      * 
+     * @param {VelocityConfig} [config] - Configuration options
      * @returns {number[]} Array of velocity values (fps)
      * 
      * @example
@@ -502,29 +505,40 @@ export class Trace {
      * console.log(`Peak velocity: ${maxVelocity.toFixed(1)} fps`);
      * ```
      */
-    velocityMap(): number[] {
+    speedMap(config: VelocityConfig): number[] {
         return this.points
             .map((p1, i, a) => {
-                if (i === a.length - 1) return null;
+                if (i === a.length - 1) return null; // cannot compute velocity for last point
 
-                const [, x1, y1] = p1;
-                const [, x2, y2] = a[i + 1];
+                const [, x1, y1] = p1; // 0 - 1
+                const [, x2, y2] = a[i + 1]; // 0 - 1
 
-                const dx = (x2 - x1) * 54;
-                const dy = (y2 - y1) * 27;
+                const dx = (x2 - x1) * 54; // ft
+                const dy = (y2 - y1) * 27; // ft
 
+                // feet / tick (0.25s)
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                return distance * 4;
+                let vel = distance * 4; // feet per second
+                
+                if (config.rolloff) {
+                    if (vel > config.rolloffVel) {
+                        return null; // ignore extreme velocities
+                    } else if (vel > config.maxVel) {
+                        vel = config.maxVel; // cap at maxVel
+                    }
+                }
+                return Math.min(vel, config.maxVel);
             })
-            .filter(p => p !== null) as number[];
+            .filter(vel => vel !== null) as number[];
     }
 
     /**
      * Generates a histogram of velocity distribution
      * Useful for analyzing robot movement patterns and performance characteristics
      * 
-     * @param {number} bins - Number of histogram bins to create
+     * @param {number} numBins - Number of histogram bins to create
+     * @param {VelocityConfig} [config] - Configuration options
      * @returns {number[]} Array of counts for each velocity bin
      * 
      * @example
@@ -539,26 +553,45 @@ export class Trace {
      * });
      * ```
      */
-    velocityHistogram(bins: number): number[] {
-        const m = this.velocityMap();
-        const sorted = m.sort((a, b) => a - b);
-        const max = sorted[sorted.length - 1];
+    velocityHistogram(config: VelocityConfig): {
+        bins: number[];
+        labels: number[];
+    } {
+        const m = this.speedMap(config)
+            .filter(v => v > 0);
+        if (m.length === 0) {
+            return {
+                bins: [],
+                labels: [],
+            };
+        }
+        const numBins = config.maxVel;
+        const sorted = m.slice().sort((a, b) => a - b);
+        const max = Math.min(sorted[sorted.length - 1]);
 
-        const buckets: number[] = new Array(bins).fill(0);
-        const bucketSize = max / bins;
+        const bins: number[] = new Array(numBins).fill(0);
+        const bucketSize = max === 0 ? 1 : max / numBins;
+
+        const binLabels: number[] = Array.from({ length: numBins }, (_, i) => {
+            return (i + 0.5) * bucketSize;
+        });
 
         for (const v of m) {
-            const bucket = Math.floor(v / bucketSize);
-            buckets[bucket]++;
+            const bucket = Math.min(numBins - 1, Math.floor(v / bucketSize));
+            bins[bucket] += 1;
         }
 
-        return buckets;
+        return {
+            bins: bins,
+            labels: binLabels,
+        };
     }
 
     /**
      * Calculates average velocity across entire trace
      * Provides overall measure of robot movement speed
      * 
+     * @param {VelocityConfig} [config] - Configuration options
      * @returns {number} Average velocity in feet per second
      * 
      * @example
@@ -572,8 +605,8 @@ export class Trace {
      * }
      * ```
      */
-    averageVelocity(): number {
-        const m = this.velocityMap();
+    averageVelocity(config: VelocityConfig): number {
+        const m = this.speedMap(config);
         const sum = m.reduce((a, b) => a + b, 0);
         return sum / m.length;
     }
@@ -637,15 +670,16 @@ export class Trace {
     /**
      * Calculates total time robot was effectively stationary
      * Counts intervals where velocity is below specified threshold
+     * @param {VelocityConfig} config - Configuration options
      * @param threshold - Velocity threshold to consider as "not moving" (fps)
      * @returns {number} Total time stationary in seconds
      */
-    secondsNotMoving(threshold = 0.1): number {
-        const velocities = this.velocityMap();
+    secondsNotMoving(config: VelocityConfig & { threshold: number }): number {
+        const velocities = this.speedMap(config);
         let notMovingCount = 0;
-
+        
         for (const v of velocities) {
-            if (v < threshold) {
+            if (v < config.threshold) {
                 notMovingCount++;
             }
         }
@@ -658,24 +692,65 @@ export class Trace {
      * @param section Time section to retrieve
      * @returns {TraceArray} Array of trace points for the section
      */
-    getSection(section: 'auto' | 'teleop' | 'endgame'): TraceArray {
-        switch (section) {
-            case 'auto':
-                return this.points.slice(0, 15 * 4) as TraceArray;
-            case 'teleop':
-                return this.points.slice(15 * 4, 135 * 4) as TraceArray;
-            case 'endgame':
-                return this.points.slice(135 * 4, 150 * 4) as TraceArray;
-            default:
-                return [];
+    getSection<Y extends YearInfo>(section: keyof Y['timer'], yearInfo: Y): TraceArray {
+        const [start, end] = yearInfo.timer[section as keyof typeof yearInfo.timer];
+        return this.points.slice(
+            start * 4,
+            end * 4
+        ) as TraceArray;
+    }
+
+    /**
+     * Calculates total time robot was stationary without performing any actions
+     * Considers both velocity and action state to determine true inactivity
+     * @param config Configuration options including time threshold, speed threshold, and relevant actions
+     * @param {number} config.timeThresholdMs - Minimum time in milliseconds to consider as stationary after an action
+     * @param {number} config.speedThreshold - Velocity threshold in fps to consider as not moving
+     * @param {string[]} [config.allowedActions] - List of action codes that reset the inactivity timer when performed
+     * @returns {number} Total time stationary without actions in seconds
+     */
+    secondsIdle(config: {
+        timeThresholdMs: number;
+        speedThreshold: number;
+        allowedActions: string[];
+    }): number {
+        let lastActionTime: number | null = null;
+        let lastMoveTime: number | null = null;
+        let totalIdleTime = 0;
+
+        const velMap = this.speedMap({
+            maxVel: 20,
+            rolloff: true,
+            rolloffVel: 25,
+        });
+
+        // start at 2nd point since the velMap is based on changes between points
+        for (let i = 1; i < this.points.length; i++) {
+            const [time, , , action] = this.points[i];
+            const vel = velMap[i] || Infinity; // if no velocity data, assume very high to avoid false idle time
+
+            if (vel <= config.speedThreshold) {
+                if (config.allowedActions.includes(String(action))) {
+                    // they are doing something
+                    lastActionTime = time;
+                    lastMoveTime = null; // reset move time since they are active
+                } else {
+                    // they are not doing anything, check if they are idle                    
+                    if (lastActionTime !== null && time - lastActionTime >= config.timeThresholdMs) {
+                        // they have been idle for long enough after an action
+                        if (lastMoveTime === null) {
+                            lastMoveTime = time; // start idle timer
+                        } else {
+                            totalIdleTime += time - lastMoveTime; // accumulate idle time
+                            lastMoveTime = time; // reset move timer to current time
+                        }
+                    } else {
+                        lastMoveTime = null; // reset move time if they haven't been idle long enough
+                    }
+                }
+            }
         }
+
+        return totalIdleTime / 1000; // convert to seconds
     }
 }
-
-
-
-const traceString = `{"state":"compressed","trace":"AAAAAA0;ABObEl0;ACQQCW0;ADQQCW0;AEQQCW0;AFPoDG0;AGPHDj0;AHOWDy0;AINbEE0;AJNYEE0;AKNXEG0;ALNXEG0;AMNhEQ0;ANObEp0;AOPVFT0;APQDFf0;AQQmGF0;ARRWJF0;ASQhLt0;ATMvOx0;AUMKQE0;AVMRQh0;AWLDRb0;AXJbSH0;AYJASL0;AZJCRQ0;AaJNQc0;AbLxQQ0;AcOpOU0;AdQkJb0;AeRJIHspk;AfRJIH0;AgRJIHspk;AhRJIH0;AiRJIH0;AjRJIH0;AkQoJj0;AlQFLF0;AmPnLo0;AnPdMQ0;AoPcMe0;ApPbMe0;AqPZMi0;ArOhNb0;AsOGNx0;AtOAOE0;AuNBOs0;AvMNPi0;AwKzQL0;AxJcPN0;AyJOOj0;AzJUNr0;BAJkOW0;BBKcPg0;BCMHQI0;BDNbPg0;BEPSNY0;BFQWLJ0;BGQmKR0;BHQhKZ0;BIPbLe0;BJPKMB0;BKPKMB0;BLOyMG0;BMOrMK0;BNOrMK0;BOOrMK0;BPOrMK0;BQOrMW0;BROsMY0;BSOsMY0;BTOxMW0;BUPPLz0;BVPiLQ0;BWQCKZ0;BXQTJk0;BYQZJg0;BZQcJe0;BaQfJd0;BbQhJd0;BcQhJd0;BdQiJd0;BeQkJd0;BfQlJd0;BgQnJd0;BhQpJe0;BiQqJe0;BjQqJespk;BkQqJe0;BlQqJe0;BmQhIX0;BnQLJb0;BoPyJr0;BpPqKR0;BqPrKo0;BrPuKu0;BsQCKI0;BtQFJO0;BuPvHz0;BvPuHU0;BwQDGF0;BxQLEj0;ByQpDT0;BzRNCx0;CARNDD0;CBREDJ0;CCRBDJ0;CDRBDQ0;CEQyDT0;CFQxDY0;CGQwDi0;CHQwDs0;CIQxEB0;CJRBEJ0;CKRBEJ0;CLRCET0;CMQyFdspk;CNQyFd0;COQyFd0;CPQyFd0;CQQIGB0;CRQLFF0;CSQPEv0;CTQWEv0;CUQcEv0;CVQcFI0;CWOwHh0;CXNHHV0;CYLAJb0;CZIlJt0;CaHQKP0;CbFtLV0;CcEmNZ0;CdDxOy0;CeCQOm0;CfCQOl0;CgCoOd0;ChDjOc0;CiETOW0;CjFINZ0;CkGCMW0;ClDfQH0;CmDKQL0;CnDNQE0;CoDkPZ0;CpEKNx0;CqDzOB0;CrDUQF0;CsDWQH0;CtEDOp0;CuEUOX0;CvDrPT0;CwDMQR0;CxDKQU0;CyDKQU0;CzDKQg0;DADMQq0;DBDTQt0;DCDXQy0;DDDHQU0;DEDPQK0;DFEOQN0;DGEdQI0;DHEgQI0;DIEgQI0;DJEaQN0;DKEaQN0;DLEaQN0;DMEaQN0;DNEaQN0;DOFCQT0;DPGCQm0;DQHTQZ0;DRIeQX0;DSJjQL0;DTKQPd0;DULBOX0;DVLMNc0;DWLMMW0;DXLILY0;DYLUKY0;DZMLJX0;DaMwJG0;DbNUIz0;DcNrId0;DdORIC0;DeOlHn0;DfOuHm0;DgOuHm0;DhOuHm0;DiOwHg0;DjPsHH0;DkQDHI0;DlQDHIspk;DmQDHI0;DnQDHI0;DoPuGq0;DpPNIF0;DqPtJk0;DrQQKe0;DsPwLq0;DtOsMp0;DuOENl0;DvNVOW0;DwMgOj0;DxLzOX0;DyLaOA0;DzLMNj0;EAKnNd0;EBJoOM0;ECIiOy0;EDHNPI0;EEFUOu0;EFEcOU0;EGDkOK0;EHCnOp0;EICQPN0;EJCFPW0;EKCEPX0;ELCEPX0;EMCIPU0;ENCPPN0;EOCSPI0;EPCwOu0;EQEGOu0;ERFAOs0;ESFSOD0;ETFgNA0;EUFwLZ0;EVGZKY0;EWHKKP0;EXIUKq0;EYJfLI0;EZKVLD0;EaLCKi0;EbLlJx0;EcMlJF0;EdNnIY0;EeOrHz0;EfPvHT0;EgQiHB0;EhQnGq0;EiQnGk0;EjQnGh0;EkQmGf0;ElQmGfspk;EmQmGf0;EnQmGf0;EoQfGN0;EpQBGX0;EqPcIx0;ErQQLD0;EsOzMP0;EtNmLb0;EuMpKx0;EvLoKx0;EwLBLc0;ExKgMc0;EyKQNx0;EzJeOx0;FAHyPN0;FBGePr0;FCFhQH0;FDExQT0;FEEePi0;FFEJPE0;FGDdPF0;FHDFPU0;FICpPt0;FJCoQH0;FKCoQQ0;FLCmQT0;FMCmQT0;FNCnQH0;FOCqPy0;FPDMOo0;FQDsNV0;FREhNV0;FSFfMG0;FTGjKY0;FUHeKV0;FVINKM0;FWIlJq0;FXJGJJ0;FYJYIY0;FZJrHs0;FaKRHp0;FbKzHy0;FcLqJM0;FdMmIp0;FeNdGU0;FfOVFF0;FgPoFr0;FhQMGj0;FiQZGp0;FjQbGp0;FkQcGq0;FlQcGqspk;FmQcGq0;FnQcGq0;FoQVFz0;FpPIFX0;FqNRGq0;FrLuJq0;FsKrKc0;FtKCKb0;FuJZKf0;FvIpKx0;FwIHMG0;FxHWNg0;FyGWOX0;FzFaOr0;GAEoPK0;GBEOPg0;GCDrQO0;GDDeQf0;GEDeQd0;GFDfQZ0;GGDfQX0;GHDfQW0;GIDfQW0;GJDeQW0;GKDsQC0;GLEjOP0;GMFzNf0;GNGtNv0;GOHnOK0;GPJDNy0;GQKDNl0;GRKoNK0;GSKrMk0;GTKwLk0;GULdKJ0;GVMBJO0;GWLtHv0;GXLwFg0;GYMrEp0;GZNjFH0;GaOFFt0;GbOTGW0;GcOaGw0;GdOqHs0;GePJHz0;GfPdHj0;GgQKIj0;GhQkIP0;GiQwHw0;GjQyHw0;GkQyHwspk;GlQyHw0;GmQsIm0;GnQBIs0;GoOWHg0;GpNDGO0;GqLiFt0;GrKfGj0;GsKpIn0;GtKiKZ0;GuKLLZ0;GvJkMK0;GwIxNW0;GxHuOf0;GyHFPF0;GzGkPR0;HAGIPc0;HBFgPd0;HCFIPW0;HDEePW0;HEEZPc0;HFEuPy0;HGFRPz0;HHFRPz0;HIFBQC0;HJEoQC0;HKEoQC0;HLEYPs0;HMDhPd0;HNDJPi0;HOCsQB0;HPCsPt0;HQDEPl0;HRDWPf0;HSDPPo0;HTCpPi0;HUChPg0;HVCtPg0;HWDCPg0;HXDYPp0;HYDrPr0;HZELPs0;HaEYPs0;HbEaPs0;HcEaPs0;HdEZPs0;HeEMPt0;HfEHPt0;HgEFPt0;HhEDPt0;HiECPt0;HjEBPr0;HkEBPr0;HlECPw0;HmEDPw0;HnEDPz0;HoEDQH0;HpEFQK0;HqEGQK0;HrEKQO0;HsEjQc0;HtFlPg0;HuHUPZ0;HvJfNZ0;HwLhKI0;HxNHIq0;HyOLHk0;HzOuGt0;IAPOGW0;IBPdGE0;ICPwFN0;IDQIFj0;IEQHGh0;IFQIHV0;IGQPHQspk;IHQPHQ0;IIQPHQ0;IJQmFw0;IKOrGk0;ILNQIS0;IMMOJb0;INLLJx0;IOKbKU0;IPKDLD0;IQJlMH0;IRJgNK0;ISJTOG0;ITIxOj0;IUIlOs0;IVIdPA0;IWIYPE0;IXICPU0;IYHTPo0;IZGNPy0;IaFXPs0;IbEmPs0;IcEPPw0;IdDvQC0;IeDaQK0;IfDNQN0;IgDNQN0;IhDdQE0;IiEGQB0;IjEjQI0;IkFRQQ0;IlGIQF0;ImHLPv0;InIUPg0;IoJLPa0;IpJtPW0;IqKdPU0;IrLNPL0;IsLuOu0;ItNMNl0;IuOzLl0;IvPqKL0;IwQBIz0;IxPvHj0;IyQAGf0;IzQOFw0;JAQZFw0;JBQeGH0;JCQeGHspk;JDQeGH0;JEQeGH0;JFQIGH0;JGPOFj0;JHOxFd0;JIOwFc0;JJOwFc0;JKOwFc0;JLOyFd0;JMPPFw0;JNPkGQ0;JOPoGR0;JPQNGg0;JQQQGg0;JRQQGg0;JSQOGg0;JTPyGH0;JUPjFT0;JVPiGc0;JWQAGX0;JXQFGQ0;JYQGGO0;JZQHGN0;JaQHGL0;JbQHGL0;JcQHGL0;JdQHGLspk;JeQHGL0;JfQHGL0;JgQUFl0;JhQIFo0;JiQGFo0;JjQFFo0;JkQFFs0;JlQFFs0;JmQFFs0;JnQFFs0;JoQFFt0;JpQFFv0;JqQFFv0;JrQFFv0;JsQFFw0;JtQFFw0;JuQFFy0;JvQFFy0;JwQFFz0;JxQFGB0;JyQFGB0;JzPrGE0;KAPBGk0;KBORHw0;KCNwIO0;KDNvIO0;KENvIO0;KFNvIO0;KGNvIO0;KHNvIO0;KINvIO0;KJNvIO0;KKNvIO0;KLNvIO0;KMNvIO0;KNNvIO0;KONvIO0;KPNvIO0;KQNvIO0;KRNvIO0;KSNvIO0;KTNvIO0;KUNvIO0;KVNvIO0;KWNvIO0;KXNvIO0;KYNvIO0;KZNvIO0;KaNvIO0;KbNvIO0;KcNvIO0;KdNvIO0;KeNvIO0;KfNvIO0;KgNvIO0;KhNvIO0;KiNvIO0;KjNvIO0;KkNvIO0;KlNvIO0;KmNvIO0;KnNvIO0;KoNvIO0;KpNvIO0;KqNvIO0;KrNvIO0;KsNvIO0;KtNvIO0;KuNvIO0;KvNvIO0;KwNvIO0;KxNvIO0;KyNvIO0;KzNvIO0;LANvIO0;LBNvIO0;LCNvIO0;LDNvIO0;LENvIO0;LFNvIO0;LGNvIO0;LHNvIO0;LINvIO0;LJNvIO0;LKNvIO0;LLNvIO0;LMNvIO0;LNNvIO0;LONvIO0;LPNvIO0;LQNvIO0;LRNvIO0;LSNvIO0;LTNvIO0;LUNvIO0;LVNvIO0;LWNvIO0;LXNvIO0;LYNvIO0;LZNvIO0;LaNvIO0;LbNvIO0;LcNvIO0;LdNvIO0;LeNvIO0;LfNvIO0;LgNvIO0;LhNvIO0;LiNvIO0;LjNvIO0;LkNvIO0;LlNvIO0;LmNvIO0;LnNvIO0;LoNvIO0;LpNvIO0;LqNvIO0;LrNvIO0;LsNvIO0;LtNvIO0;LuNvIO0;LvNvIO0;LwNvIO0;LxNvIO0;LyNvIO0;LzNvIO0;MANvIO0;MBNvIO0;MCNvIO0;MDNvIO0;MENvIO0;MFNvIO0;MGNvIO0;MHNvIO0;MINvIO0;MJNvIO0;MKNvIO0;MLNvIO0;MMNvIO0;MNNvIO0;MONvIO0;MPNvIO0"}`;
-
-const trace = Trace.parse(traceString).unwrap();
-
-trace.velocityMap();

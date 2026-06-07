@@ -1,5 +1,5 @@
 import { Point2D } from "math/point";
-import { YearInfo } from ".";
+import { Timer, YearInfo } from ".";
 import { Trace } from "../trace";
 import { isInside } from "math/polygon";
 import { attempt, Result } from "ts-utils/check";
@@ -398,6 +398,11 @@ class YearInfo2024 extends YearInfo<
     }
 }
 
+export const Timer2024: Timer = {
+    auto: [0, 15],
+    teleop: [16, 140],
+}
+
 /**
  * Default instance of YearInfo2024 with complete field layout and scoring rules
  * Ready to use for 2024 CRESCENDO game analysis
@@ -433,7 +438,8 @@ export default new YearInfo2024(
     ],
     actions2024,
     scoreBreakdown2024,
-    actionZones2024
+    actionZones2024,
+    Timer2024
 );
 
 
