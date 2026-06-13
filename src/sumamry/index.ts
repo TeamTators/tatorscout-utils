@@ -32,24 +32,19 @@ import { TBAMatch } from "../tba";
  * @template T Parsed scoring row shape.
  */
 export interface SummarySchema<T> {
-    [groupName: string]: {
-        [itemName: string]: (data: {
-            matches: TBAMatch[];
-            traces: Trace[];
-            scoring: T[];
-            team: number;
-        }) => number[];
-    }
+    [itemName: string]: (data: {
+        matches: TBAMatch[];
+        traces: Trace[];
+        scoring: T[];
+        team: number;
+    }) => number[];
 }
 
-type GroupNames<T, S extends SummarySchema<T>> = keyof S;
-type ItemNames<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> = keyof S[G];
+type ItemNames<T, S extends SummarySchema<T>> = keyof S;
 
 
 type TeamComputedSummaryType<T, S extends SummarySchema<T>> = {
-    [G in GroupNames<T, S>]: {
-        [I in ItemNames<T, S, G>]: Point;
-    }
+    [I in ItemNames<T, S>]: Point;
 };
 
 class Point {
@@ -196,9 +191,14 @@ export class Summary<T, S extends SummarySchema<T>> {
         const results = traces.map(trace => this.traceParser(trace));
         const summary = {} as TeamComputedSummaryType<T, S>;
 
-        for (const groupName in this.schema) {
-            const group = new Group<T, S, typeof groupName>(groupName, this.schema[groupName]);
-            summary[groupName] = group.compute(team, results, traces, matches);
+        for (const itemName in this.schema) {
+            const fn = this.schema[itemName];
+            summary[itemName] = new Point(fn({
+                matches,
+                traces,
+                scoring: results,
+                team,
+            }));
         }
 
         return summary;
@@ -239,21 +239,15 @@ export class Summary<T, S extends SummarySchema<T>> {
     deserialize(serialized: string): Result<ComputedSummary<T, S>> {
         return attempt(() => {
             const parsed = z.object({
-                schema: z.record(z.record(z.record(z.array(z.number()).transform(arr => new Point(arr))))),
+                schema: z.record(z.record(z.array(z.number()).transform(arr => new Point(arr)))),
                 // extras: z.record(z.record(z.record(z.number()))),
             }).parse(JSON.parse(serialized)) as CombinedSummaryType<T, S>;
 
-            // ensure all groups and items match schema, if there are any extras it's still valid.
+            // ensure all items match schema, if there are any extras it's still valid.
             for (const team in parsed.schema) {
-                for (const group in this.schema) {
-                    if (!(group in parsed.schema[team])) {
-                        throw new Error(`Missing group '${group}' in team '${team}'`);
-                    } else {
-                        for (const item in this.schema[group]) {
-                            if (!(item in parsed.schema[team][group])) {
-                                throw new Error(`Missing item '${item}' in group '${group}' for team '${team}'`);
-                            }
-                        }
+                for (const item in this.schema) {
+                    if (!(item in parsed.schema[team])) {
+                        throw new Error(`Missing item '${item}' for team '${team}'`);
                     }
                 }
             }
@@ -264,44 +258,6 @@ export class Summary<T, S extends SummarySchema<T>> {
 
             return new ComputedSummary<T, S>(parsed, this);
         });
-    }
-};
-
-class Group<T, S extends SummarySchema<T>, G extends GroupNames<T, S>> {
-    /**
-     * @param {G} name Group key.
-     * @param {S[G]} items Group item functions.
-     */
-    constructor(
-        public readonly name: G,
-        public readonly items: S[G],
-    ) {}
-
-    /**
-     * Computes all items in this group for one team.
-     *
-     * @param {number} team Team number.
-     * @param {T[]} data Parsed scoring rows.
-     * @param {Trace[]} traces Raw trace rows.
-     * @param {TBAMatch[]} matches Match rows.
-     * @returns {TeamComputedSummaryType<T, S>[G]} Group data as Points.
-     */
-    compute(team: number, data: T[], traces: Trace[], matches: TBAMatch[]): TeamComputedSummaryType<T, S>[G] {
-        const result = {} as {
-            [I in ItemNames<T, S, G>]: Point;
-        }
-
-        for (const itemName in this.items) {
-            const fn = this.items[itemName];
-            result[itemName] = new Point(fn({
-                matches,
-                traces,
-                scoring: data,
-                team,
-            }));
-        }
-
-        return result;
     }
 }
 
@@ -367,17 +323,13 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         }
     }
 
-    private getRankedTeams<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, metric: RankMetric): RankedTeam[] {
-        if (!(group in this.parent.schema)) {
-            throw new Error(`Unknown group '${String(group)}'.`);
-        }
-
-        if (!(item in this.parent.schema[group])) {
-            throw new Error(`Unknown item '${String(item)}' in group '${String(group)}'.`);
+    private getRankedTeams<I extends ItemNames<T, S>>(item: I, metric: RankMetric): RankedTeam[] {
+        if (!(item in this.parent.schema)) {
+            throw new Error(`Unknown item '${String(item)}'.`);
         }
 
         const scoredTeams = Object.entries(this.schemaData).map(([team, teamData]) => {
-            const point = teamData[group][item];
+            const point = teamData[item];
             return {
                 team,
                 score: this.scorePoint(point, metric),
@@ -407,48 +359,44 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
     }
 
     /**
-     * Returns team numbers ordered by descending score for one group/item pair.
+     * Returns team numbers ordered by descending score for one item.
      *
-     * @template G Group key.
-     * @template I Item key in group G.
-     * @param {G} group Group name.
+     * @template I Item key.
      * @param {I} item Item name.
      * @param {RankMetric} [metric="average"] Metric used to score each team.
      * @returns {number[]} Team numbers from highest to lowest metric value.
      *
      * @example
-     * const ordered = computed.rank("auto", "notes");
-     * const byMedian = computed.rank("auto", "notes", "median");
+     * const ordered = computed.rank("notes");
+     * const byMedian = computed.rank("notes", "median");
      */
-    rank<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, metric: RankMetric = "average"): number[] {
-        return this.getRankedTeams(group, item, metric).map(entry => entry.team);
+    rank<I extends ItemNames<T, S>>(item: I, metric: RankMetric = "average"): number[] {
+        return this.getRankedTeams(item, metric).map(entry => entry.team);
     }
 
     /**
-     * Returns the rank for one team in one group/item pair.
+     * Returns the rank for one team for one item.
      *
      * Ranking uses competition ranking semantics: tied teams share rank and
      * later ranks are skipped.
      *
-     * @template G Group key.
-     * @template I Item key in group G.
+     * @template I Item key.
      * @param {number | string} team Team number to query.
-     * @param {G} group Group name.
      * @param {I} item Item name.
      * @param {RankMetric} [metric="average"] Metric used to score each team.
      * @returns {number} 1-based rank for the team.
      * @throws {Error} When team id is invalid or team is not present.
      *
      * @example
-     * const rank = computed.teamRank(1678, "auto", "notes", "max");
+     * const rank = computed.teamRank(1678, "notes", "max");
      */
-    teamRank<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(team: number | string, group: G, item: I, metric: RankMetric = "average"): number {
+    teamRank<I extends ItemNames<T, S>>(team: number | string, item: I, metric: RankMetric = "average"): number {
         const teamNumber = Number(team);
         if (!Number.isFinite(teamNumber)) {
             throw new Error(`Invalid team '${String(team)}'. Team must be numeric.`);
         }
 
-        const ranked = this.getRankedTeams(group, item, metric);
+        const ranked = this.getRankedTeams(item, metric);
         const found = ranked.find(entry => entry.team === teamNumber);
         if (!found) {
             throw new Error(`Team '${teamNumber}' is not present in this summary.`);
@@ -458,19 +406,17 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
     }
 
     /**
-     * Pivots data from team-first structure to group/item-first structure.
+     * Pivots data from team-first structure to item-first structure.
      *
-     * Output shape: pivoted[group][item][team] = Point.
+     * Output shape: pivoted[item][team] = Point.
      *
-     * @returns {{ [group in GroupNames<T, S>]: { [item in ItemNames<T, S, group>]: { [team: string]: Point } } }}
+     * @returns {{ [item in ItemNames<T, S>]: { [team: string]: Point } }}
      * Pivoted summary data.
      */
     pivot() {
         type PivotedSummaryType = {
-            [group in GroupNames<T, S>]: {
-                [item in ItemNames<T, S, group>]: {
-                    [team: string]: Point;
-                }
+            [item in ItemNames<T, S>]: {
+                [team: string]: Point;
             }
         };
 
@@ -479,22 +425,13 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         for (const team in this.schemaData) {
             const teamData = this.schemaData[team];
 
-            for (const group in teamData) {
-                if (!(group in pivoted)) {
-                    pivoted[group] = {} as PivotedSummaryType[typeof group];
+            for (const item in teamData) {
+                if (!(item in pivoted)) {
+                    pivoted[item] = {};
                 }
 
-                const groupData = teamData[group];
-                const pivotedGroup = pivoted[group];
-
-                for (const item in groupData) {
-                    if (!(item in pivoted[group])) {
-                        pivoted[group][item] = {};
-                    }
-
-                    const pivotedItem = pivotedGroup[item] as { [team: string]: Point };
-                    pivotedItem[team] = groupData[item];
-                }
+                const pivotedItem = pivoted[item] as { [team: string]: Point };
+                pivotedItem[team] = teamData[item];
             }
         }
 
@@ -513,19 +450,17 @@ class ComputedTeamSummary<T, S extends SummarySchema<T>> {
     ) {}
 
     /**
-     * Returns this team's rank for one group/item pair.
+     * Returns this team's rank for one item.
      *
-     * @template G Group key.
-     * @template I Item key in group G.
-     * @param {G} group Group name.
+     * @template I Item key.
      * @param {I} item Item name.
      * @param {RankMetric} [metric="average"] Metric used to score each team.
      * @returns {number} 1-based rank.
      *
      * @example
-     * const rank = computed.team(1678).rank("auto", "notes", "median");
+     * const rank = computed.team(1678).rank("notes", "median");
      */
-    rank<G extends GroupNames<T, S>, I extends ItemNames<T, S, G>>(group: G, item: I, metric: RankMetric = "average"): number {
-        return this.parent.teamRank(this.team, group, item, metric);
+    rank<I extends ItemNames<T, S>>(item: I, metric: RankMetric = "average"): number {
+        return this.parent.teamRank(this.team, item, metric);
     }
 }
