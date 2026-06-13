@@ -1,5 +1,5 @@
 import { Trace } from "../trace";
-import { createTypedSummary, SummarySchema } from "../summary";
+import { Summary, SummarySchema } from "../summary";
 import { TBAMatch } from "../tba";
 import { attempt, Result } from "ts-utils/check";
 
@@ -210,9 +210,6 @@ export class YearInfo<
      * ```
      */
     summary<S extends SummarySchema<ParsedScoreBreakdown>>(schema: S) {
-        return createTypedSummary<ParsedScoreBreakdown, S>(
-            (trace) => this.parse(trace),
-            schema
-        );
+        return new Summary<ParsedScoreBreakdown, S>((trace) => this.parse(trace), schema);
     }
 }
