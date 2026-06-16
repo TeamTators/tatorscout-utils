@@ -240,7 +240,6 @@ export class Summary<T, S extends SummarySchema<T>> {
         return attempt(() => {
             const parsed = z.object({
                 schema: z.record(z.record(z.array(z.number()).transform(arr => new Point(arr)))),
-                // extras: z.record(z.record(z.record(z.number()))),
             }).parse(JSON.parse(serialized)) as CombinedSummaryType<T, S>;
 
             // ensure all items match schema, if there are any extras it's still valid.
@@ -259,11 +258,32 @@ export class Summary<T, S extends SummarySchema<T>> {
             return new ComputedSummary<T, S>(parsed, this);
         });
     }
+
+    deserializeTeam(serialized: string, team: number | string): Result<ComputedTeamSummary<T, S>> {
+        return attempt(() => {
+            const parsed = z.object({
+                schema: z.record(z.record(z.array(z.number()).transform(arr => new Point(arr)))),
+            }).parse(JSON.parse(serialized)) as CombinedSummaryType<T, S>;
+
+            const teams = Object.keys(parsed.schema);
+            if (!teams.includes(String(team))) {
+                throw new Error(`Team '${team}' not found in serialized data`);
+            }
+
+            const teamData = parsed.schema[String(team)];
+            for (const item in this.schema) {
+                if (!(item in teamData)) {
+                    throw new Error(`Missing item '${item}' for team '${team}'`);
+                }
+            }
+
+            return new ComputedTeamSummary<T, S>(String(team), new ComputedSummary<T, S>(parsed, this));
+        });
+    }
 }
 
 export class ComputedSummary<T, S extends SummarySchema<T>> {
     readonly schemaData: ComputedSummaryType<T, S>;
-    // readonly extraData: Extra;
 
     /**
      * @param {CombinedSummaryType<T, S>} data Computed schema payload.
@@ -300,6 +320,14 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         }
 
         return new ComputedTeamSummary<T, S>(teamKey, this);
+    }
+
+    serialize(): string {
+        const payload: CombinedSummaryType<T, S> = {
+            schema: this.schemaData,
+        };
+
+        return JSON.stringify(payload);
     }
 
     private scorePoint(point: Point, metric: RankMetric): number {
@@ -462,5 +490,20 @@ class ComputedTeamSummary<T, S extends SummarySchema<T>> {
      */
     rank<I extends ItemNames<T, S>>(item: I, metric: RankMetric = "average"): number {
         return this.parent.teamRank(this.team, item, metric);
+    }
+
+    serialize(): string {
+        const teamData = this.parent.schemaData[this.team];
+        if (!teamData) {
+            throw new Error(`Team '${this.team}' is not present in the parent summary.`);
+        }
+
+        const payload: CombinedSummaryType<T, S> = {
+            schema: {
+                [this.team]: teamData,
+            },
+        };
+
+        return JSON.stringify(payload);
     }
 }
