@@ -503,7 +503,9 @@ class ComputedTeamSummary<T, S extends SummarySchema<T>> {
         }
 
         const payload = {
-            values: teamData,
+            values: Object.fromEntries(
+                Object.entries(teamData).map(([item, point]) => [item, point.values]),
+            ),
             rankings: this.rankings,
         };
 
