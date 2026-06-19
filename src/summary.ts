@@ -262,22 +262,23 @@ export class Summary<T, S extends SummarySchema<T>> {
     deserializeTeam(serialized: string, team: number | string): Result<ComputedTeamSummary<T, S>> {
         return attempt(() => {
             const parsed = z.object({
-                schema: z.record(z.record(z.array(z.number()).transform(arr => new Point(arr)))),
-            }).parse(JSON.parse(serialized)) as CombinedSummaryType<T, S>;
+                values: z.record(z.array(z.number()).transform(arr => new Point(arr))),
+                rankings: z.record(z.number()),
+            }).parse(JSON.parse(serialized));
 
-            const teams = Object.keys(parsed.schema);
-            if (!teams.includes(String(team))) {
-                throw new Error(`Team '${team}' not found in serialized data`);
+            const teamKey = String(team);
+            if (!(teamKey in parsed.values)) {
+                throw new Error(`Team '${teamKey}' is not present in the deserialized data.`);
             }
 
-            const teamData = parsed.schema[String(team)];
-            for (const item in this.schema) {
-                if (!(item in teamData)) {
-                    throw new Error(`Missing item '${item}' for team '${team}'`);
-                }
-            }
+            const teamData: CombinedSummaryType<T, S> = {
+                schema: {
+                    [teamKey]: parsed.values[teamKey],
+                } as ComputedSummaryType<T, S>,
+            };
 
-            return new ComputedTeamSummary<T, S>(String(team), new ComputedSummary<T, S>(parsed, this));
+            const computedSummary = new ComputedSummary<T, S>(teamData, this);
+            return new ComputedTeamSummary<T, S>(teamKey, computedSummary);
         });
     }
 }
@@ -477,19 +478,22 @@ class ComputedTeamSummary<T, S extends SummarySchema<T>> {
         private readonly parent: ComputedSummary<T, S>,
     ) {}
 
-    /**
-     * Returns this team's rank for one item.
-     *
-     * @template I Item key.
-     * @param {I} item Item name.
-     * @param {RankMetric} [metric="average"] Metric used to score each team.
-     * @returns {number} 1-based rank.
-     *
-     * @example
-     * const rank = computed.team(1678).rank("notes", "median");
-     */
-    rank<I extends ItemNames<T, S>>(item: I, metric: RankMetric = "average"): number {
-        return this.parent.teamRank(this.team, item, metric);
+    get rankings() {
+        const teamData = this.parent.schemaData[this.team];
+        if (!teamData) {
+            throw new Error(`Team '${this.team}' is not present in the parent summary.`);
+        }
+
+        const rankings: { [item in ItemNames<T, S>]?: number } = {};
+        for (const item in teamData) {
+            try {
+                rankings[item as ItemNames<T, S>] = this.parent.teamRank(this.team, item as ItemNames<T, S>);
+            } catch {
+                // if team or item is missing, skip ranking for that item
+            }
+        }
+
+        return rankings;
     }
 
     serialize(): string {
@@ -498,10 +502,9 @@ class ComputedTeamSummary<T, S extends SummarySchema<T>> {
             throw new Error(`Team '${this.team}' is not present in the parent summary.`);
         }
 
-        const payload: CombinedSummaryType<T, S> = {
-            schema: {
-                [this.team]: teamData,
-            },
+        const payload = {
+            values: teamData,
+            rankings: this.rankings,
         };
 
         return JSON.stringify(payload);
