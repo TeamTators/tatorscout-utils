@@ -237,44 +237,44 @@ export class Summary<T, S extends SummarySchema<T>> {
      * @param {string} serialized JSON payload.
      * @returns {Result<ComputedSummary<T, S>>} Computed summary wrapped in Result.
      */
-    deserialize(serialized: string): Result<ComputedSummary<T, S>> {
+    deserialize(serialized: SerializedSummary<T, S>): Result<ComputedSummary<T, S>> {
         return attempt(() => {
-            const parsed = z.object({
-                schema: z.record(z.record(z.array(z.number()).transform(arr => new Point(arr)))),
-            }).parse(JSON.parse(serialized)) as CombinedSummaryType<T, S>;
+            const teams = new Set<string>();
+            for (const item in serialized) {
+                if (!(item in this.schema)) {
+                    throw new Error(`Unknown item '${item}' in serialized data.`);
+                }
 
-            // ensure all items match schema, if there are any extras it's still valid.
-            for (const team in parsed.schema) {
-                for (const item in this.schema) {
-                    if (!(item in parsed.schema[team])) {
-                        throw new Error(`Missing item '${item}' for team '${team}'`);
+                const teamValues = serialized[item];
+                for (const team in teamValues) {
+                    teams.add(team);
+                    const values = teamValues[team];
+                    if (!Array.isArray(values) || !values.every(v => typeof v === "number")) {
+                        throw new Error(`Invalid values for team '${team}', item '${item}'. Expected array of numbers.`);
                     }
                 }
             }
+            const computedSummary = new ComputedSummary<T, S>({
+                schema: Object.fromEntries(Object.entries(serialized).map(([item, teamValues]) => [
+                    item,
+                    Object.fromEntries(
+                        Object.entries(teamValues).map(([team, values]) => [team, new Point(values)]),
+                    ) as TeamComputedSummaryType<T, S>,
+                ])) as ComputedSummaryType<T, S>,
+            }, this);
 
-            // extras cannot be validated since they are freeform
-
-            // this.extras = parsed.extras;
-
-            return new ComputedSummary<T, S>(parsed, this);
+            return computedSummary;
         });
     }
 
-    deserializeTeam(serialized: string, team: number | string): Result<ComputedTeamSummary<T, S>> {
+    deserializeTeam(serialized: SerializedTeamSummary<T, S>, team: number | string): Result<ComputedTeamSummary<T, S>> {
         return attempt(() => {
-            const parsed = z.object({
-                values: z.record(z.array(z.number()).transform(arr => new Point(arr))),
-                rankings: z.record(z.number()),
-            }).parse(JSON.parse(serialized));
-
             const teamKey = String(team);
-            if (!(teamKey in parsed.values)) {
-                throw new Error(`Team '${teamKey}' is not present in the deserialized data.`);
-            }
-
             const teamData: CombinedSummaryType<T, S> = {
                 schema: {
-                    [teamKey]: parsed.values[teamKey],
+                    [teamKey]: Object.fromEntries(
+                        Object.entries(serialized).map(([item, values]) => [item, new Point(values)]),
+                    ) as TeamComputedSummaryType<T, S>,
                 } as ComputedSummaryType<T, S>,
             };
 
@@ -282,6 +282,12 @@ export class Summary<T, S extends SummarySchema<T>> {
             return new ComputedTeamSummary<T, S>(teamKey, computedSummary);
         });
     }
+}
+
+export type SerializedSummary<T, S extends SummarySchema<T>> = {
+        [item in ItemNames<T, S>]: {
+            [team: string]: number[];
+        }
 }
 
 export class ComputedSummary<T, S extends SummarySchema<T>> {
@@ -324,12 +330,18 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
         return new ComputedTeamSummary<T, S>(teamKey, this);
     }
 
-    serialize(): string {
-        const payload = {
-            schema: this.schemaData,
-        };
+    serialize(): SerializedSummary<T, S> {
+        const pivoted = this.pivot();
+        const serialized: SerializedSummary<T, S> = Object.fromEntries(
+            Object.entries(pivoted).map(([item, teamPoints]) => [
+                item,
+                Object.fromEntries(
+                    Object.entries(teamPoints).map(([team, point]) => [team, point.values]),
+                ),
+            ]),
+        ) as { [item in ItemNames<T, S>]: { [team: string]: number[] } };
 
-        return JSON.stringify(payload);
+        return serialized;
     }
 
     private scorePoint(point: Point, metric: RankMetric): number {
@@ -469,6 +481,10 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
     }
 }
 
+export type SerializedTeamSummary<T, S extends SummarySchema<T>> = {
+    [item in ItemNames<T, S>]: number[];
+}
+
 export class ComputedTeamSummary<T, S extends SummarySchema<T>> {
     /**
      * @param {string} team Team id as string.
@@ -497,19 +513,14 @@ export class ComputedTeamSummary<T, S extends SummarySchema<T>> {
         return rankings;
     }
 
-    serialize(): string {
+    serialize(): SerializedTeamSummary<T, S> {
         const teamData = this.parent.schemaData[this.team];
         if (!teamData) {
             throw new Error(`Team '${this.team}' is not present in the parent summary.`);
         }
 
-        const payload = {
-            values: Object.fromEntries(
-                Object.entries(teamData).map(([item, point]) => [item, point.values]),
-            ),
-            rankings: this.rankings,
-        };
-
-        return JSON.stringify(payload);
+        return Object.fromEntries(
+            Object.entries(teamData).map(([item, point]) => [item, point.values]),
+        ) as SerializedTeamSummary<T, S>;
     }
 }
