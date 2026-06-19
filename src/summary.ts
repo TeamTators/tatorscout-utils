@@ -40,14 +40,14 @@ export interface SummarySchema<T> {
     }) => number[];
 }
 
-type ItemNames<T, S extends SummarySchema<T>> = keyof S;
+export type ItemNames<T, S extends SummarySchema<T>> = keyof S;
 
 
-type TeamComputedSummaryType<T, S extends SummarySchema<T>> = {
+export type TeamComputedSummaryType<T, S extends SummarySchema<T>> = {
     [I in ItemNames<T, S>]: Point;
 };
 
-class Point {
+export class Point {
     public readonly values: readonly number[];
 
     /**
@@ -60,7 +60,8 @@ class Point {
     /**
      * @returns {number} Arithmetic mean, or 0 when no values exist.
      */
-    average(): number {
+    average(
+    ): number {
         if (this.values.length === 0) return 0;
         return this.values.reduce((a, b) => a + b, 0) / this.values.length;
     }
@@ -144,11 +145,11 @@ class Point {
 }
 
 
-type ComputedSummaryType<T, S extends SummarySchema<T>> = {
+export type ComputedSummaryType<T, S extends SummarySchema<T>> = {
     [team: string]: TeamComputedSummaryType<T, S>;
 }
 
-type RankedTeam = {
+export type RankedTeam = {
     team: number;
     score: number;
     rank: number;
@@ -167,7 +168,7 @@ export type RankMetric =
     | "coefficientOfVariation";
 
 /** Combined type including both schema-based and extra summary data */
-type CombinedSummaryType<T, S extends SummarySchema<T>> = {
+export type CombinedSummaryType<T, S extends SummarySchema<T>> = {
     schema: ComputedSummaryType<T, S>;
     // extras: Extra;
 };
@@ -324,7 +325,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
     }
 
     serialize(): string {
-        const payload: CombinedSummaryType<T, S> = {
+        const payload = {
             schema: this.schemaData,
         };
 
@@ -468,7 +469,7 @@ export class ComputedSummary<T, S extends SummarySchema<T>> {
     }
 }
 
-class ComputedTeamSummary<T, S extends SummarySchema<T>> {
+export class ComputedTeamSummary<T, S extends SummarySchema<T>> {
     /**
      * @param {string} team Team id as string.
      * @param {ComputedSummary<T, S>} parent Parent computed summary.
