@@ -146,6 +146,9 @@ const actions2026 = {
     her10: 'Herd 10',
     her25: 'Herd 25',
     out: 'Outpost',
+    hub: 'Hub (combined)',
+    her: 'Herd (combined)',
+    lob: 'Lob (combined)',
 };
 
 const actionZones2026 = {
@@ -449,8 +452,15 @@ class YearInfo2026 extends YearInfo<
     }
 
 
-    parseActions(actions: Record<keyof typeof actions2026, number[]>): Record<string, number[]> {
-        const combined: Record<string, number[]> = {
+    parseActions(actions: Record<keyof typeof actions2026, number[]>): {
+        out: number[];        
+        her: number[];
+        lob: number[];
+        hub: number[];
+    } {
+        const combined: {
+            [key in keyof typeof actions2026]?: number[];
+        } = {
             out: [],
             her: [],
             lob: [],
@@ -473,34 +483,34 @@ class YearInfo2026 extends YearInfo<
         for (const [key, values] of Object.entries(actions)) {
             switch (key) {
                 case 'out':
-                    combined.out.push(...values);
+                    combined.out?.push(...values);
                     break;
                 case 'hub1':
-                    combined.hub.push(...merge(combined.hub, values, 1));
+                    combined.hub?.push(...merge(combined.hub, values, 1));
                     break;
                 case 'hub5':
-                    combined.hub.push(...merge(combined.hub, values, 5));
+                    combined.hub?.push(...merge(combined.hub, values, 5));
                     break;
                 case 'hub10':
-                    combined.hub.push(...merge(combined.hub, values, 10));
+                    combined.hub?.push(...merge(combined.hub, values, 10));
                     break;
                 case 'her5':
-                    combined.her.push(...merge(combined.her, values, 5));
+                    combined.her?.push(...merge(combined.her, values, 5));
                     break;
                 case 'her10':
-                    combined.her.push(...merge(combined.her, values, 10));
+                    combined.her?.push(...merge(combined.her, values, 10));
                     break;
                 case 'her25':
-                    combined.her.push(...merge(combined.her, values, 25));
+                    combined.her?.push(...merge(combined.her, values, 25));
                     break;
                 case 'lob1':
-                    combined.lob.push(...merge(combined.lob, values, 1));
+                    combined.lob?.push(...merge(combined.lob, values, 1));
                     break;
                 case 'lob5':
-                    combined.lob.push(...merge(combined.lob, values, 5));
+                    combined.lob?.push(...merge(combined.lob, values, 5));
                     break;
                 case 'lob10':
-                    combined.lob.push(...merge(combined.lob, values, 10));
+                    combined.lob?.push(...merge(combined.lob, values, 10));
                     break;
             }
         }
