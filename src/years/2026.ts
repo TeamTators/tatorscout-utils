@@ -447,6 +447,66 @@ class YearInfo2026 extends YearInfo<
             return { cycleTimes, depletionTimes, weightedDepletionTimes, scoredPerCycle, weightedCycleTimes };
         });
     }
+
+
+    parseActions(actions: Record<keyof typeof actions2026, number[]>): Record<string, number[]> {
+        const combined: Record<string, number[]> = {
+            out: [],
+            her: [],
+            lob: [],
+            hub: [],
+        };
+
+        const merge = (target: number[], source: number[], multiplier: number) => {
+            source = source.map(value => value * multiplier);
+            const longest = target.length > source.length ? target : source;
+            const shortest = target.length > source.length ? source : target;
+            
+            return longest.map((value, index) => {
+                if (index < shortest.length) {
+                    return value + shortest[index];
+                }
+                return value;
+            });
+        }
+
+        for (const [key, values] of Object.entries(actions)) {
+            switch (key) {
+                case 'out':
+                    combined.out.push(...values);
+                    break;
+                case 'hub1':
+                    combined.hub.push(...merge(combined.hub, values, 1));
+                    break;
+                case 'hub5':
+                    combined.hub.push(...merge(combined.hub, values, 5));
+                    break;
+                case 'hub10':
+                    combined.hub.push(...merge(combined.hub, values, 10));
+                    break;
+                case 'her5':
+                    combined.her.push(...merge(combined.her, values, 5));
+                    break;
+                case 'her10':
+                    combined.her.push(...merge(combined.her, values, 10));
+                    break;
+                case 'her25':
+                    combined.her.push(...merge(combined.her, values, 25));
+                    break;
+                case 'lob1':
+                    combined.lob.push(...merge(combined.lob, values, 1));
+                    break;
+                case 'lob5':
+                    combined.lob.push(...merge(combined.lob, values, 5));
+                    break;
+                case 'lob10':
+                    combined.lob.push(...merge(combined.lob, values, 10));
+                    break;
+            }
+        }
+
+        return combined;
+    }
 }
 
 export const Timer2026: Timer = {
@@ -460,7 +520,7 @@ export const Timer2026: Timer = {
 }
 
 /**
- * Default instance of YearInfo2025 with complete field layout and scoring rules
+ * Default instance of YearInfo2026 with complete field layout and scoring rules
  * Ready to use for 2026 REBUILT game analysis
  * 
  * @type {YearInfo2026}

@@ -201,7 +201,7 @@ export class YearInfo<
      * 
      * @example
      * ```typescript
-     * const analyzer = year2025.summary({
+     * const analyzer = year2026.summary({
      *   "Scoring": {
      *     "Auto Average": Aggregators.average,
      *     "Peak Performance": Aggregators.max
@@ -211,5 +211,10 @@ export class YearInfo<
      */
     summary<S extends SummarySchema<ParsedScoreBreakdown>>(schema: S) {
         return new Summary<ParsedScoreBreakdown, S>((trace) => this.parse(trace), schema);
+    }
+
+
+    parseActions(actions: Record<Actions, number[]>): Record<string, number[]> {
+        throw new Error('parseActions not implemented for this year');
     }
 }
